@@ -21,50 +21,89 @@ jobs:
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
-      # 1. Checkout source
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      # 3. Java
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
-      # 4. Gunakan SDK bawaan GitHub runner.
-      # Tidak menggunakan android-actions/setup-android lagi.
-      - name: Locate Android SDK
+      # Cari folder proyek, termasuk jika source ada di subfolder.
+      - name: Locate PSM project automatically
         shell: bash
         run: |
           set -euo pipefail
 
-          echo "Android SDK: $ANDROID_HOME"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          base = Path.cwd()
+          required = [
+              "package.json",
+              "capacitor.config.json",
+              "www/index.html",
+              "android/app/build.gradle"
+          ]
+
+          ignored = {".git", "node_modules", ".gradle", "build"}
+          candidates = []
+
+          for current, dirs, files in os.walk(base):
+              dirs[:] = [d for d in dirs if d not in ignored]
+              current_path = Path(current)
+
+              if "package.json" in files:
+                  candidates.append(current_path)
+
+          for folder in candidates:
+              missing = [
+                  item for item in required
+                  if not (folder / item).is_file()
+              ]
+
+              print(f"\nFolder diperiksa: {folder.relative_to(base) or '.'}")
+
+              if not missing:
+                  relative = folder.relative_to(base)
+                  project_dir = str(relative) if str(relative) else "."
+                  with open(os.environ["GITHUB_ENV"], "a") as env:
+                      env.write(f"PROJECT_DIR={project_dir}\n")
+                  print("Semua file proyek ditemukan.")
+                  print("PROJECT_DIR =", project_dir)
+                  break
+
+              print("File belum ditemukan:", ", ".join(missing))
+          else:
+              raise SystemExit(
+                  "Folder proyek PSM lengkap tidak ditemukan. "
+                  "Periksa apakah source ZIP sudah diekstrak ke repository."
+              )
+          PY
+
+      - name: Locate Android SDK tools
+        shell: bash
+        run: |
+          set -euo pipefail
 
           test -d "$ANDROID_HOME"
 
           SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" \
             -type f -name sdkmanager | head -n 1)
 
-          if [ -z "$SDKMANAGER" ]; then
-            echo "ERROR: sdkmanager tidak ditemukan"
-            exit 1
-          fi
+          test -n "$SDKMANAGER"
 
           echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
           echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
 
-          echo "SDK Manager ditemukan:"
-          echo "$SDKMANAGER"
-
-      # 5. Terima lisensi SDK
       - name: Accept Android SDK licenses
         shell: bash
         run: |
@@ -74,13 +113,10 @@ jobs:
           import os
           import subprocess
 
-          sdkmanager = os.environ["SDKMANAGER"]
-          sdkroot = os.environ["ANDROID_HOME"]
-
           result = subprocess.run(
               [
-                  sdkmanager,
-                  "--sdk_root=" + sdkroot,
+                  os.environ["SDKMANAGER"],
+                  "--sdk_root=" + os.environ["ANDROID_HOME"],
                   "--licenses"
               ],
               input="y\n" * 300,
@@ -93,12 +129,10 @@ jobs:
           print(result.stdout)
 
           if result.returncode != 0:
-              raise SystemExit("Gagal menerima lisensi Android SDK")
+              raise SystemExit("Penerimaan lisensi SDK gagal")
           PY
 
-      # 6. Install SDK yang diperlukan
       - name: Install Android SDK packages
-        shell: bash
         run: |
           set -euo pipefail
 
@@ -111,80 +145,75 @@ jobs:
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
             --install "build-tools;35.0.0"
 
-          echo "Android SDK installation selesai"
-
-      # 7. Gradle
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
 
-      # 8. Periksa struktur proyek
       - name: Verify project files
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          set -e
+          set -euo pipefail
 
-          test -f package.json
-          test -f capacitor.config.json
-          test -f www/index.html
-          test -f android/app/build.gradle
+          echo "Project directory: $PWD"
 
-          echo "Semua file proyek ditemukan"
+          for file in \
+            package.json \
+            capacitor.config.json \
+            www/index.html \
+            android/app/build.gradle
+          do
+            if [ ! -f "$file" ]; then
+              echo "FILE HILANG: $file"
+              exit 1
+            fi
+            echo "OK: $file"
+          done
 
-      # 9. Install dependency
       - name: Install npm dependencies
+        working-directory: ${{ env.PROJECT_DIR }}
         run: npm install --no-audit --no-fund
 
-      # 10. Periksa library
       - name: Verify dependencies
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
           node -e "console.log(require.resolve('html2canvas'))"
           node -e "console.log(require.resolve('xlsx'))"
 
-      # 11. Salin vendor
       - name: Copy vendor assets
+        working-directory: ${{ env.PROJECT_DIR }}
         run: npm run copy:vendor
 
-      # 12. Tes aplikasi
       - name: Run regression tests
+        working-directory: ${{ env.PROJECT_DIR }}
         run: npm test
 
-      # 13. Sync Capacitor
       - name: Sync Capacitor Android
+        working-directory: ${{ env.PROJECT_DIR }}
         run: npx cap sync android
 
-      # 14. Periksa SDK
       - name: Verify Android SDK
         run: |
           test -d "$ANDROID_HOME/platforms/android-35"
           test -d "$ANDROID_HOME/build-tools/35.0.0"
           test -d "$ANDROID_HOME/platform-tools"
+          echo "Android SDK OK"
 
-          echo "Android SDK siap digunakan"
-
-      # 15. Build APK
       - name: Build Debug APK
-        run: |
-          cd android
-          gradle assembleDebug --no-daemon
+        working-directory: ${{ env.PROJECT_DIR }}/android
+        run: gradle assembleDebug --no-daemon
 
-      # 16. Verifikasi APK
       - name: Verify APK
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
           APK="android/app/build/outputs/apk/debug/app-debug.apk"
-
-          if [ ! -f "$APK" ]; then
-            echo "APK tidak ditemukan"
-            exit 1
-          fi
-
+          test -f "$APK"
           ls -lh "$APK"
 
-      # 17. Upload APK
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: PSM-PANTAU-DEBUG-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.PROJECT_DIR }}/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
