@@ -1,5 +1,5 @@
 
-name: Build PSM Pantau Debug APK
+name: Build PSM Pantau v44.3 Debug APK
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Android Debug APK
+    name: Test and Build Android APK
     runs-on: ubuntu-latest
 
     env:
@@ -21,84 +21,33 @@ jobs:
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Set up Java
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
-      # Cari folder proyek, termasuk jika source ada di subfolder.
-      - name: Locate PSM project automatically
+      - name: Locate Android SDK Manager
         shell: bash
         run: |
           set -euo pipefail
-
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-
-          base = Path.cwd()
-          required = [
-              "package.json",
-              "capacitor.config.json",
-              "www/index.html",
-              "android/app/build.gradle"
-          ]
-
-          ignored = {".git", "node_modules", ".gradle", "build"}
-          candidates = []
-
-          for current, dirs, files in os.walk(base):
-              dirs[:] = [d for d in dirs if d not in ignored]
-              current_path = Path(current)
-
-              if "package.json" in files:
-                  candidates.append(current_path)
-
-          for folder in candidates:
-              missing = [
-                  item for item in required
-                  if not (folder / item).is_file()
-              ]
-
-              print(f"\nFolder diperiksa: {folder.relative_to(base) or '.'}")
-
-              if not missing:
-                  relative = folder.relative_to(base)
-                  project_dir = str(relative) if str(relative) else "."
-                  with open(os.environ["GITHUB_ENV"], "a") as env:
-                      env.write(f"PROJECT_DIR={project_dir}\n")
-                  print("Semua file proyek ditemukan.")
-                  print("PROJECT_DIR =", project_dir)
-                  break
-
-              print("File belum ditemukan:", ", ".join(missing))
-          else:
-              raise SystemExit(
-                  "Folder proyek PSM lengkap tidak ditemukan. "
-                  "Periksa apakah source ZIP sudah diekstrak ke repository."
-              )
-          PY
-
-      - name: Locate Android SDK tools
-        shell: bash
-        run: |
-          set -euo pipefail
-
           test -d "$ANDROID_HOME"
 
-          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" \
-            -type f -name sdkmanager | head -n 1)
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" \
+            -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1)"
 
-          test -n "$SDKMANAGER"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager tidak ditemukan"
+            exit 1
+          fi
 
           echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
           echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
@@ -110,15 +59,16 @@ jobs:
           set -euo pipefail
 
           python3 - <<'PY'
-          import os
-          import subprocess
+          import os, subprocess
 
-          result = subprocess.run(
-              [
-                  os.environ["SDKMANAGER"],
-                  "--sdk_root=" + os.environ["ANDROID_HOME"],
-                  "--licenses"
-              ],
+          cmd = [
+              os.environ["SDKMANAGER"],
+              "--sdk_root=" + os.environ["ANDROID_HOME"],
+              "--licenses"
+          ]
+
+          p = subprocess.run(
+              cmd,
               input="y\n" * 300,
               text=True,
               stdout=subprocess.PIPE,
@@ -126,13 +76,14 @@ jobs:
               timeout=300
           )
 
-          print(result.stdout)
+          print(p.stdout)
 
-          if result.returncode != 0:
-              raise SystemExit("Penerimaan lisensi SDK gagal")
+          if p.returncode:
+              raise SystemExit(p.returncode)
           PY
 
       - name: Install Android SDK packages
+        shell: bash
         run: |
           set -euo pipefail
 
@@ -150,70 +101,54 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Verify project files
-        working-directory: ${{ env.PROJECT_DIR }}
+      - name: Verify source structure
+        shell: bash
         run: |
           set -euo pipefail
 
-          echo "Project directory: $PWD"
+          test -f package.json
+          test -f capacitor.config.json
+          test -f www/index.html
+          test -f android/settings.gradle
+          test -f android/app/build.gradle
 
-          for file in \
-            package.json \
-            capacitor.config.json \
-            www/index.html \
-            android/app/build.gradle
-          do
-            if [ ! -f "$file" ]; then
-              echo "FILE HILANG: $file"
-              exit 1
-            fi
-            echo "OK: $file"
-          done
+          echo "Struktur proyek Capacitor 7 valid"
 
       - name: Install npm dependencies
-        working-directory: ${{ env.PROJECT_DIR }}
         run: npm install --no-audit --no-fund
 
-      - name: Verify dependencies
-        working-directory: ${{ env.PROJECT_DIR }}
+      - name: Verify required packages
         run: |
+          node -e "console.log(require.resolve('@capacitor/core'))"
           node -e "console.log(require.resolve('html2canvas'))"
           node -e "console.log(require.resolve('xlsx'))"
 
-      - name: Copy vendor assets
-        working-directory: ${{ env.PROJECT_DIR }}
+      - name: Copy offline vendor libraries
         run: npm run copy:vendor
 
       - name: Run regression tests
-        working-directory: ${{ env.PROJECT_DIR }}
         run: npm test
 
       - name: Sync Capacitor Android
-        working-directory: ${{ env.PROJECT_DIR }}
         run: npx cap sync android
 
-      - name: Verify Android SDK
-        run: |
-          test -d "$ANDROID_HOME/platforms/android-35"
-          test -d "$ANDROID_HOME/build-tools/35.0.0"
-          test -d "$ANDROID_HOME/platform-tools"
-          echo "Android SDK OK"
-
       - name: Build Debug APK
-        working-directory: ${{ env.PROJECT_DIR }}/android
-        run: gradle assembleDebug --no-daemon
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd android
+          gradle assembleDebug --no-daemon --stacktrace
 
       - name: Verify APK
-        working-directory: ${{ env.PROJECT_DIR }}
         run: |
           APK="android/app/build/outputs/apk/debug/app-debug.apk"
-          test -f "$APK"
+          test -s "$APK"
           ls -lh "$APK"
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: PSM-PANTAU-DEBUG-APK
-          path: ${{ env.PROJECT_DIR }}/android/app/build/outputs/apk/debug/app-debug.apk
+          name: PSM-PANTAU-v44.3-DEBUG-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
