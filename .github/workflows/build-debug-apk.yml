@@ -31,21 +31,70 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # Siapkan Android SDK tanpa daftar paket otomatis
+      # Jangan biarkan action menerima lisensi secara otomatis.
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: false
 
-      # Pasang paket satu per satu dengan tanda kutip
-      - name: Install Android SDK packages
+      # Terima lisensi menggunakan input otomatis.
+      - name: Accept Android SDK licenses
+        shell: bash
         run: |
-          yes | sdkmanager --licenses || true
+          python3 - <<'PY'
+          import os
+          import subprocess
+          import sys
 
-          sdkmanager --install \
+          sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
+          if not sdk:
+              print("ANDROID_HOME / ANDROID_SDK_ROOT tidak ditemukan")
+              sys.exit(1)
+
+          candidates = [
+              os.path.join(sdk, "cmdline-tools", "latest", "bin", "sdkmanager"),
+              os.path.join(sdk, "cmdline-tools", "bin", "sdkmanager"),
+              os.path.join(sdk, "tools", "bin", "sdkmanager"),
+          ]
+
+          sdkmanager = next((p for p in candidates if os.path.isfile(p)), None)
+          if not sdkmanager:
+              print("sdkmanager tidak ditemukan")
+              sys.exit(1)
+
+          print("SDK:", sdk)
+          print("SDK Manager:", sdkmanager)
+
+          result = subprocess.run(
+              [sdkmanager, "--sdk_root=" + sdk, "--licenses"],
+              input=("y\n" * 300),
+              text=True,
+              stdout=subprocess.PIPE,
+              stderr=subprocess.STDOUT,
+              timeout=300
+          )
+
+          print(result.stdout[-12000:])
+
+          if result.returncode != 0:
+              print("Penerimaan lisensi gagal")
+              sys.exit(result.returncode)
+
+          print("Pemeriksaan penerimaan lisensi selesai")
+          PY
+
+      # Pasang Android SDK yang diperlukan.
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          set -e
+
+          sdkmanager --sdk_root="$ANDROID_HOME" --install \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
 
-          sdkmanager --list_installed
+          echo "Android SDK packages installed"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -76,6 +125,12 @@ jobs:
 
       - name: Sync Capacitor Android
         run: npx cap sync android
+
+      - name: Verify Android SDK
+        run: |
+          sdkmanager --list_installed
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -d "$ANDROID_HOME/build-tools/35.0.0"
 
       - name: Build Debug APK
         run: |
