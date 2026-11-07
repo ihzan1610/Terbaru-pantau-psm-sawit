@@ -109,7 +109,8 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      # 8. Ekstrak ZIP dan cari folder proyek
+      
+      # 8. Cari dan ekstrak ZIP sumber secara otomatis
       - name: Extract ZIP and locate project root
         id: project
         shell: bash
@@ -118,19 +119,29 @@ jobs:
 
           mkdir -p .github-workspace/source
 
-          ZIP_FILE="$(find . -maxdepth 2 -type f \
-            -iname 'PSM-PANTAU-v44.3-SOURCE-LOCKED-FIX.zip' \
-            -not -path '*/.git/*' | head -n 1)"
+          ZIP_FILE=""
+
+          while IFS= read -r -d '' file; do
+            if unzip -tq "$file" >/dev/null 2>&1; then
+              if unzip -Z1 "$file" | grep -Eq '(^|/)capacitor\.config\.json$'; then
+                ZIP_FILE="$file"
+                break
+              fi
+            fi
+          done < <(
+            find . -maxdepth 2 -type f -iname 'PSM-PANTAU-v44.3*.zip' \
+              -not -path '*/.git/*' -print0
+          )
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "ZIP sumber PSM Pantau tidak ditemukan!"
-            find . -maxdepth 3 -type f
+            echo "ZIP sumber PSM Pantau v44.3 tidak ditemukan."
+            find . -maxdepth 3 -type f | sort
             exit 1
           fi
 
-          echo "ZIP ditemukan: $ZIP_FILE"
+          echo "ZIP sumber ditemukan: $ZIP_FILE"
 
-          unzip -o -q "$ZIP_FILE" -d .github-workspace/source
+          unzip -q "$ZIP_FILE" -d .github-workspace/source
 
           PROJECT_DIR=""
 
@@ -141,24 +152,21 @@ jobs:
                [ -f "$candidate/www/index.html" ] && \
                [ -f "$candidate/android/settings.gradle" ] && \
                [ -f "$candidate/android/app/build.gradle" ]; then
-
               PROJECT_DIR="$(realpath "$candidate")"
               break
             fi
           done < <(
-            find .github-workspace/source \
-              -type f -name package.json \
+            find .github-workspace/source -type f -name package.json \
               -not -path '*/node_modules/*' -print0
           )
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "Struktur proyek tidak ditemukan di dalam ZIP!"
+            echo "Struktur proyek Capacitor tidak lengkap."
             find .github-workspace/source -maxdepth 5 -type f | head -250
             exit 1
           fi
 
           echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
-
           echo "PROYEK DITEMUKAN: $PROJECT_DIR"
 
       # 9. Instal dependensi npm
