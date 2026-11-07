@@ -25,22 +25,30 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           mapfile -t zips < <(find . -maxdepth 1 -type f -iname '*.zip')
+
           if [ "${#zips[@]}" -ne 1 ]; then
-            echo "Harus ada tepat satu ZIP di root repository."
+            echo "Harus ada tepat satu file ZIP di root repository."
             exit 1
           fi
+
           mkdir -p "$RUNNER_TEMP/psm-project"
           unzip -q "${zips[0]}" -d "$RUNNER_TEMP/psm-project"
+
           settings_file=$(find "$RUNNER_TEMP/psm-project" -type f -name settings.gradle -print -quit)
+
           if [ -z "$settings_file" ]; then
             echo "settings.gradle tidak ditemukan."
             exit 1
           fi
+
           project_dir=$(dirname "$settings_file")
+
           test -d "$project_dir/app"
           test -f "$project_dir/build.gradle"
           test -f "$project_dir/app/build.gradle"
+
           echo "project_dir=$project_dir" >> "$GITHUB_OUTPUT"
 
       - name: Set up Java 17
@@ -49,8 +57,31 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+
+          echo "Using Android SDK: $SDK_ROOT"
+
+          SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -path '*/bin/sdkmanager' 2>/dev/null | sort -V | tail -n 1)
+
+          if [ -z "$SDKMANAGER" ]; then
+            echo "Android sdkmanager tidak ditemukan."
+            exit 1
+          fi
+
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+
+          "$SDKMANAGER" --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -61,9 +92,13 @@ jobs:
         working-directory: ${{ steps.project.outputs.project_dir }}
         run: |
           set -euo pipefail
+
           npm install --no-save --no-package-lock html2canvas@1.4.1 xlsx@0.18.5
+
           mkdir -p app/src/main/assets/vendor
+
           cp node_modules/html2canvas/dist/html2canvas.min.js app/src/main/assets/vendor/html2canvas.min.js
+
           cp node_modules/xlsx/dist/xlsx.full.min.js app/src/main/assets/vendor/xlsx.full.min.js
 
       - name: Run regression tests
