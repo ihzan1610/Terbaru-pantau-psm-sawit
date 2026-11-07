@@ -16,132 +16,171 @@ jobs:
     name: Build Android Debug APK
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
     steps:
+      # 1. Checkout source
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Set up Java JDK
+      # 3. Java
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
-      # Jangan biarkan action menerima lisensi secara otomatis.
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          accept-android-sdk-licenses: false
+      # 4. Gunakan SDK bawaan GitHub runner.
+      # Tidak menggunakan android-actions/setup-android lagi.
+      - name: Locate Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
 
-      # Terima lisensi menggunakan input otomatis.
+          echo "Android SDK: $ANDROID_HOME"
+
+          test -d "$ANDROID_HOME"
+
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" \
+            -type f -name sdkmanager | head -n 1)
+
+          if [ -z "$SDKMANAGER" ]; then
+            echo "ERROR: sdkmanager tidak ditemukan"
+            exit 1
+          fi
+
+          echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+
+          echo "SDK Manager ditemukan:"
+          echo "$SDKMANAGER"
+
+      # 5. Terima lisensi SDK
       - name: Accept Android SDK licenses
         shell: bash
         run: |
+          set -euo pipefail
+
           python3 - <<'PY'
           import os
           import subprocess
-          import sys
 
-          sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
-          if not sdk:
-              print("ANDROID_HOME / ANDROID_SDK_ROOT tidak ditemukan")
-              sys.exit(1)
-
-          candidates = [
-              os.path.join(sdk, "cmdline-tools", "latest", "bin", "sdkmanager"),
-              os.path.join(sdk, "cmdline-tools", "bin", "sdkmanager"),
-              os.path.join(sdk, "tools", "bin", "sdkmanager"),
-          ]
-
-          sdkmanager = next((p for p in candidates if os.path.isfile(p)), None)
-          if not sdkmanager:
-              print("sdkmanager tidak ditemukan")
-              sys.exit(1)
-
-          print("SDK:", sdk)
-          print("SDK Manager:", sdkmanager)
+          sdkmanager = os.environ["SDKMANAGER"]
+          sdkroot = os.environ["ANDROID_HOME"]
 
           result = subprocess.run(
-              [sdkmanager, "--sdk_root=" + sdk, "--licenses"],
-              input=("y\n" * 300),
+              [
+                  sdkmanager,
+                  "--sdk_root=" + sdkroot,
+                  "--licenses"
+              ],
+              input="y\n" * 300,
               text=True,
               stdout=subprocess.PIPE,
               stderr=subprocess.STDOUT,
               timeout=300
           )
 
-          print(result.stdout[-12000:])
+          print(result.stdout)
 
           if result.returncode != 0:
-              print("Penerimaan lisensi gagal")
-              sys.exit(result.returncode)
-
-          print("Pemeriksaan penerimaan lisensi selesai")
+              raise SystemExit("Gagal menerima lisensi Android SDK")
           PY
 
-      # Pasang Android SDK yang diperlukan.
+      # 6. Install SDK yang diperlukan
       - name: Install Android SDK packages
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
-          sdkmanager --sdk_root="$ANDROID_HOME" --install \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
+            --install "platform-tools"
 
-          echo "Android SDK packages installed"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
+            --install "platforms;android-35"
 
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
+            --install "build-tools;35.0.0"
+
+          echo "Android SDK installation selesai"
+
+      # 7. Gradle
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
 
+      # 8. Periksa struktur proyek
       - name: Verify project files
         run: |
+          set -e
+
           test -f package.json
           test -f capacitor.config.json
           test -f www/index.html
           test -f android/app/build.gradle
-          echo "Project files OK"
 
+          echo "Semua file proyek ditemukan"
+
+      # 9. Install dependency
       - name: Install npm dependencies
         run: npm install --no-audit --no-fund
 
+      # 10. Periksa library
       - name: Verify dependencies
         run: |
           node -e "console.log(require.resolve('html2canvas'))"
           node -e "console.log(require.resolve('xlsx'))"
 
+      # 11. Salin vendor
       - name: Copy vendor assets
         run: npm run copy:vendor
 
+      # 12. Tes aplikasi
       - name: Run regression tests
         run: npm test
 
+      # 13. Sync Capacitor
       - name: Sync Capacitor Android
         run: npx cap sync android
 
+      # 14. Periksa SDK
       - name: Verify Android SDK
         run: |
-          sdkmanager --list_installed
           test -d "$ANDROID_HOME/platforms/android-35"
           test -d "$ANDROID_HOME/build-tools/35.0.0"
+          test -d "$ANDROID_HOME/platform-tools"
 
+          echo "Android SDK siap digunakan"
+
+      # 15. Build APK
       - name: Build Debug APK
         run: |
           cd android
           gradle assembleDebug --no-daemon
 
+      # 16. Verifikasi APK
       - name: Verify APK
         run: |
-          test -f android/app/build/outputs/apk/debug/app-debug.apk
-          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
 
+          if [ ! -f "$APK" ]; then
+            echo "APK tidak ditemukan"
+            exit 1
+          fi
+
+          ls -lh "$APK"
+
+      # 17. Upload APK
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
