@@ -1,5 +1,4 @@
-
-name: Build Debug APK from ZIP
+name: Build PSM Pantau APK (fixed dependency setup)
 
 on:
   workflow_dispatch:
@@ -12,107 +11,63 @@ permissions:
   contents: read
 
 jobs:
-  build-debug-apk:
-    name: Extract ZIP and Build APK
+  build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Find and extract project ZIP
-        id: project
-        shell: bash
-        run: |
-          set -euo pipefail
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
 
-          mapfile -t zips < <(find . -maxdepth 1 -type f -iname '*.zip')
-
-          if [ "${#zips[@]}" -ne 1 ]; then
-            echo "Harus ada tepat satu file ZIP di root repository."
-            exit 1
-          fi
-
-          mkdir -p "$RUNNER_TEMP/psm-project"
-          unzip -q "${zips[0]}" -d "$RUNNER_TEMP/psm-project"
-
-          settings_file=$(find "$RUNNER_TEMP/psm-project" -type f -name settings.gradle -print -quit)
-
-          if [ -z "$settings_file" ]; then
-            echo "settings.gradle tidak ditemukan."
-            exit 1
-          fi
-
-          project_dir=$(dirname "$settings_file")
-
-          test -d "$project_dir/app"
-          test -f "$project_dir/build.gradle"
-          test -f "$project_dir/app/build.gradle"
-
-          echo "project_dir=$project_dir" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
-      - name: Install Android SDK packages
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-
-          echo "Using Android SDK: $SDK_ROOT"
-
-          SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -path '*/bin/sdkmanager' 2>/dev/null | sort -V | tail -n 1)
-
-          if [ -z "$SDKMANAGER" ]; then
-            echo "Android sdkmanager tidak ditemukan."
-            exit 1
-          fi
-
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
-
-          "$SDKMANAGER" --install \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
-
-          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.10.2'
+          gradle-version: '8.11.1'
 
-      - name: Prepare offline libraries
-        working-directory: ${{ steps.project.outputs.project_dir }}
+      - name: Verify repository root
         run: |
-          set -euo pipefail
+          pwd
+          test -f package.json
+          test -f capacitor.config.json
+          test -f www/index.html
+          test -f android/app/build.gradle
 
-          npm install --no-save --no-package-lock html2canvas@1.4.1 xlsx@0.18.5
+      - name: Install npm dependencies
+        run: npm install --no-audit --no-fund
 
-          mkdir -p app/src/main/assets/vendor
+      - name: Verify installed vendor packages
+        run: |
+          node -e "console.log('html2canvas:', require.resolve('html2canvas'))"
+          node -e "console.log('xlsx:', require.resolve('xlsx'))"
 
-          cp node_modules/html2canvas/dist/html2canvas.min.js app/src/main/assets/vendor/html2canvas.min.js
-
-          cp node_modules/xlsx/dist/xlsx.full.min.js app/src/main/assets/vendor/xlsx.full.min.js
+      - name: Copy offline vendor assets
+        run: npm run copy:vendor
 
       - name: Run regression tests
-        working-directory: ${{ steps.project.outputs.project_dir }}
-        run: node --test tests/*.test.js
+        run: npm test
 
-      - name: Build Debug APK
-        working-directory: ${{ steps.project.outputs.project_dir }}
-        run: gradle assembleDebug --no-daemon
+      - name: Sync Capacitor Android
+        run: npx cap sync android
+
+      - name: Build debug APK
+        run: cd android && gradle assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PSM-Pantau-v42-debug-apk
-          path: ${{ steps.project.outputs.project_dir }}/app/build/outputs/apk/debug/app-debug.apk
+          name: PSM-Pantau-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 14
