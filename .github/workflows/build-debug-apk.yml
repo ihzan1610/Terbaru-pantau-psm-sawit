@@ -17,92 +17,76 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Ambil source code repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Siapkan Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      # 3. Siapkan Java
       - name: Set up Java JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
-      # 4. Siapkan Android SDK
-      # Override paket default agar tidak mencari paket SDK lama "tools".
+      # Siapkan Android SDK tanpa daftar paket otomatis
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
 
-      # 5. Siapkan Gradle
+      # Pasang paket satu per satu dengan tanda kutip
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses || true
+
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+          sdkmanager --list_installed
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
 
-      # 6. Pastikan struktur proyek lengkap
       - name: Verify project files
         run: |
-          echo "Checking project structure..."
           test -f package.json
           test -f capacitor.config.json
           test -f www/index.html
           test -f android/app/build.gradle
-          echo "Project structure OK"
+          echo "Project files OK"
 
-      # 7. Install dependency
       - name: Install npm dependencies
         run: npm install --no-audit --no-fund
 
-      # 8. Verifikasi library
       - name: Verify dependencies
         run: |
           node -e "console.log(require.resolve('html2canvas'))"
           node -e "console.log(require.resolve('xlsx'))"
 
-      # 9. Salin library vendor
       - name: Copy vendor assets
         run: npm run copy:vendor
 
-      # 10. Jalankan tes aplikasi
       - name: Run regression tests
         run: npm test
 
-      # 11. Sinkronisasi Capacitor
       - name: Sync Capacitor Android
         run: npx cap sync android
 
-      # 12. Periksa Android SDK
-      - name: Verify Android SDK
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          sdkmanager --list_installed
-          test -d "$ANDROID_HOME/platforms/android-35"
-          test -d "$ANDROID_HOME/build-tools/35.0.0"
-
-      # 13. Build APK
       - name: Build Debug APK
         run: |
           cd android
           gradle assembleDebug --no-daemon
 
-      # 14. Pastikan APK berhasil dibuat
       - name: Verify APK
         run: |
           test -f android/app/build/outputs/apk/debug/app-debug.apk
           ls -lh android/app/build/outputs/apk/debug/app-debug.apk
 
-      # 15. Upload APK
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
