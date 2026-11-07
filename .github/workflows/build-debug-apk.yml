@@ -1,3 +1,4 @@
+
 name: Build PSM Pantau v44.3 Debug APK
 
 on:
@@ -73,33 +74,56 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Locate project root (supports nested GitHub folders)
+      - name: Extract source ZIP and locate project root
         id: project
         shell: bash
         run: |
           set -euo pipefail
-          PROJECT_DIR=""
-          while IFS= read -r -d '' package_file; do
-            candidate="$(dirname "$package_file")"
-            if [ -f "$candidate/capacitor.config.json" ] && \
-               [ -f "$candidate/www/index.html" ] && \
-               [ -f "$candidate/android/settings.gradle" ] && \
-               [ -f "$candidate/android/app/build.gradle" ]; then
-              PROJECT_DIR="$candidate"
-              break
-            fi
-          done < <(find . -type f -name package.json -not -path '*/node_modules/*' -print0)
+          find_project() {
+            while IFS= read -r -d '' package_file; do
+              candidate="$(dirname "$package_file")"
+              if [ -f "$candidate/capacitor.config.json" ] && \
+                 [ -f "$candidate/www/index.html" ] && \
+                 [ -f "$candidate/android/settings.gradle" ] && \
+                 [ -f "$candidate/android/app/build.gradle" ]; then
+                realpath "$candidate"
+                return 0
+              fi
+            done < <(find . -type f -name package.json -not -path '*/node_modules/*' -not -path '*/.git/*' -print0)
+            return 1
+          }
 
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "Struktur proyek tidak ditemukan. Pastikan package.json, capacitor.config.json, www/index.html, android/settings.gradle, dan android/app/build.gradle berada dalam satu folder proyek."
-            echo "Isi folder repository:"
-            find . -maxdepth 3 -type f | sort | head -200
-            exit 1
+          PROJECT_DIR=""
+          if PROJECT_DIR="$(find_project)"; then
+            echo "Proyek ditemukan langsung: $PROJECT_DIR"
+          else
+            ZIP_FILE=""
+            while IFS= read -r -d '' z; do
+              if unzip -l "$z" | grep -Eq '(^|/)capacitor\.config\.json$'; then
+                ZIP_FILE="$z"
+                break
+              fi
+            done < <(find . -maxdepth 3 -type f -iname '*.zip' -not -path '*/.git/*' -print0)
+
+            if [ -z "$ZIP_FILE" ]; then
+              echo "Tidak ditemukan proyek langsung maupun ZIP sumber yang berisi capacitor.config.json."
+              echo "Isi repository:"; find . -maxdepth 4 -type f | sort | head -250
+              exit 1
+            fi
+
+            echo "Mengekstrak sumber dari: $ZIP_FILE"
+            mkdir -p .github-workspace/source
+            unzip -q "$ZIP_FILE" -d .github-workspace/source
+            cd .github-workspace/source
+            PROJECT_DIR="$(find_project)" || {
+              echo "ZIP berhasil diekstrak tetapi struktur proyek Android/Capacitor tidak lengkap."
+              find . -maxdepth 5 -type f | sort | head -250
+              exit 1
+            }
           fi
 
-          PROJECT_DIR="$(realpath "$PROJECT_DIR")"
           echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
-          echo "Project root ditemukan: $PROJECT_DIR"
+          echo "Root proyek: $PROJECT_DIR"
 
       - name: Install npm dependencies
         working-directory: ${{ steps.project.outputs.project_dir }}
