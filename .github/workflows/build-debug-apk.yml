@@ -1,12 +1,9 @@
-
-name: Build PSM Pantau v44.3 Debug APK
+name: Build PSM Pantau v44.4.0 APK
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master]
 
 permissions:
   contents: read
@@ -15,269 +12,114 @@ jobs:
   build:
     name: Test and Build Android APK
     runs-on: ubuntu-latest
-
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
-      # 1. Ambil repository GitHub
-      - name: Checkout source
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Persiapan Node.js
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      # 3. Persiapan Java
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
-      # 4. Cari Android SDK Manager
-      - name: Locate Android SDK Manager
-        shell: bash
-        run: |
-          set -euo pipefail
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-          test -d "$ANDROID_HOME"
-
-          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" \
-            -type f -name sdkmanager 2>/dev/null \
-            | sort -V | tail -n 1)"
-
-          if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager tidak ditemukan"
-            exit 1
-          fi
-
-          echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
-          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
-          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
-
-      # 5. Terima lisensi Android
-      - name: Accept Android SDK licenses
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          python3 - <<'PY'
-          import os
-          import subprocess
-
-          p = subprocess.run(
-              [
-                  os.environ["SDKMANAGER"],
-                  "--sdk_root=" + os.environ["ANDROID_HOME"],
-                  "--licenses"
-              ],
-              input="y\n" * 300,
-              text=True,
-              stdout=subprocess.PIPE,
-              stderr=subprocess.STDOUT,
-              timeout=300
-          )
-
-          print(p.stdout)
-
-          if p.returncode:
-              raise SystemExit(p.returncode)
-          PY
-
-      # 6. Instal Android SDK
       - name: Install Android SDK packages
-        shell: bash
         run: |
-          set -euo pipefail
+          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
-            --install "platform-tools"
-
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
-            --install "platforms;android-35"
-
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
-            --install "build-tools;35.0.0"
-
-      # 7. Persiapan Gradle
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.11.1'
-
-      
-      # 8. Cari dan ekstrak ZIP sumber secara otomatis
       - name: Extract ZIP and locate project root
         id: project
         shell: bash
         run: |
           set -euo pipefail
-
-          mkdir -p .github-workspace/source
-
-          ZIP_FILE=""
-
-          while IFS= read -r -d '' file; do
-            if unzip -tq "$file" >/dev/null 2>&1; then
-              if unzip -Z1 "$file" | grep -Eq '(^|/)capacitor\.config\.json$'; then
-                ZIP_FILE="$file"
-                break
-              fi
-            fi
-          done < <(
-            find . -maxdepth 2 -type f -iname 'PSM-PANTAU-v44.3*.zip' \
-              -not -path '*/.git/*' -print0
-          )
-
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ZIP sumber PSM Pantau v44.3 tidak ditemukan."
-            find . -maxdepth 3 -type f | sort
+          ZIP="$(find . -maxdepth 3 -type f \( -name 'PSM-PANTAU-v44.4.0-FIX-ANDROID-IME.zip' -o -name 'PSM-PANTAU-*.zip' \) -not -path './.git/*' | sort | head -n 1)"
+          if [ -z "$ZIP" ]; then
+            echo "ZIP sumber PSM Pantau tidak ditemukan. Upload PSM-PANTAU-v44.4.0-FIX-ANDROID-IME.zip ke root repository."
+            find . -maxdepth 3 -type f | sort | head -n 100
             exit 1
           fi
-
-          echo "ZIP sumber ditemukan: $ZIP_FILE"
-
-          unzip -q "$ZIP_FILE" -d .github-workspace/source
-
-          PROJECT_DIR=""
-
-          while IFS= read -r -d '' file; do
-            candidate="$(dirname "$file")"
-
-            if [ -f "$candidate/capacitor.config.json" ] && \
-               [ -f "$candidate/www/index.html" ] && \
-               [ -f "$candidate/android/settings.gradle" ] && \
-               [ -f "$candidate/android/app/build.gradle" ]; then
-              PROJECT_DIR="$(realpath "$candidate")"
+          echo "Menggunakan ZIP: $ZIP"
+          mkdir -p "$GITHUB_WORKSPACE/source"
+          unzip -q "$ZIP" -d "$GITHUB_WORKSPACE/source"
+          ROOT="$(find "$GITHUB_WORKSPACE/source" -type f -name package.json -printf '%h\n' | while read -r d; do
+            if [ -f "$d/capacitor.config.json" ] && [ -f "$d/android/app/build.gradle" ] && [ -f "$d/www/index.html" ]; then
+              echo "$d"
               break
             fi
-          done < <(
-            find .github-workspace/source -type f -name package.json \
-              -not -path '*/node_modules/*' -print0
-          )
-
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "Struktur proyek Capacitor tidak lengkap."
-            find .github-workspace/source -maxdepth 5 -type f | head -250
+          done)"
+          if [ -z "$ROOT" ]; then
+            echo "Folder proyek tidak ditemukan di dalam ZIP. Isi ZIP:"
+            find "$GITHUB_WORKSPACE/source" -maxdepth 4 -type f | sort | head -n 150
             exit 1
           fi
+          echo "PROJECT_ROOT=$ROOT" >> "$GITHUB_ENV"
+          echo "Project root: $ROOT"
 
-          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
-          echo "PROYEK DITEMUKAN: $PROJECT_DIR"
-
-      # 9. Instal dependensi npm
-      - name: Install npm dependencies
-        working-directory: ${{ steps.project.outputs.project_dir }}
-        run: npm install --no-audit --no-fund
-
-      # 10. Periksa paket wajib
-      - name: Verify required packages
-        working-directory: ${{ steps.project.outputs.project_dir }}
+      - name: Verify project files
         run: |
+          set -euo pipefail
+          cd "$PROJECT_ROOT"
+          for f in package.json capacitor.config.json www/index.html android/settings.gradle android/app/build.gradle; do
+            test -f "$f" || { echo "File sumber hilang: $f"; exit 1; }
+          done
+          test -f android/app/src/main/java/com/psmsawit/pantau/MainActivity.java
+          test -f android/app/src/main/java/com/psmsawit/pantau/LegacyAndroidBridgePlugin.java
+
+      - name: Install npm dependencies
+        run: |
+          cd "$PROJECT_ROOT"
+          npm install --no-audit --no-fund
+
+      - name: Verify required packages
+        run: |
+          cd "$PROJECT_ROOT"
           node -e "console.log('Capacitor:', require.resolve('@capacitor/core'))"
           node -e "console.log('html2canvas:', require.resolve('html2canvas'))"
           node -e "console.log('xlsx:', require.resolve('xlsx'))"
 
-      # 11. Salin library offline
       - name: Copy offline vendor libraries
-        working-directory: ${{ steps.project.outputs.project_dir }}
-        run: npm run copy:vendor
+        run: |
+          cd "$PROJECT_ROOT"
+          npm run copy:vendor
 
-      # 12. Jalankan pengujian
       - name: Run regression tests
-        working-directory: ${{ steps.project.outputs.project_dir }}
-        run: npm test
+        run: |
+          cd "$PROJECT_ROOT"
+          npm test
 
-      # 13. Sinkronisasi Capacitor
       - name: Sync Capacitor Android
-        working-directory: ${{ steps.project.outputs.project_dir }}
-        run: npx cap sync android
-
-      # 14. Perbaiki konflik repository Gradle
-      - name: Fix Capacitor Gradle repository conflict
-        working-directory: ${{ steps.project.outputs.project_dir }}
-        shell: bash
         run: |
-          set -euo pipefail
+          cd "$PROJECT_ROOT"
+          npx cap sync android
 
-          SETTINGS="android/settings.gradle"
-
-          if [ ! -f "$SETTINGS" ]; then
-            echo "settings.gradle tidak ditemukan"
-            exit 1
-          fi
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          p = Path("android/settings.gradle")
-          s = p.read_text()
-
-          modes = [
-              "PREFER_SETTINGS",
-              "FAIL_ON_PROJECT_REPOS"
-          ]
-
-          changed = False
-
-          for mode in modes:
-              pattern = r"RepositoriesMode\." + mode
-              s, count = re.subn(
-                  pattern,
-                  "RepositoriesMode.PREFER_PROJECT",
-                  s
-              )
-              if count:
-                  changed = True
-
-          if changed:
-              p.write_text(s)
-              print("Mode repository Gradle diperbaiki.")
-          elif "RepositoriesMode.PREFER_PROJECT" in s:
-              print("Mode repository sudah benar.")
-          else:
-              print("Mode repository tidak ditemukan.")
-              print(s)
-              raise SystemExit(1)
-          PY
-
-          grep -n "RepositoriesMode" "$SETTINGS" || true
-
-      # 15. Bangun APK
       - name: Build Debug APK
-        working-directory: ${{ steps.project.outputs.project_dir }}/android
-        shell: bash
         run: |
-          set -euo pipefail
+          cd "$PROJECT_ROOT/android"
           gradle assembleDebug --no-daemon --stacktrace
 
-      # 16. Periksa hasil APK
       - name: Verify APK
-        working-directory: ${{ steps.project.outputs.project_dir }}
-        shell: bash
         run: |
           set -euo pipefail
-
-          APK="android/app/build/outputs/apk/debug/app-debug.apk"
-
-          if [ ! -s "$APK" ]; then
-            echo "APK tidak ditemukan atau kosong"
-            exit 1
-          fi
-
-          echo "APK berhasil dibuat:"
+          APK="$PROJECT_ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
           ls -lh "$APK"
+          sha256sum "$APK"
 
-      # 17. Upload APK
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: PSM-PANTAU-v44.3-DEBUG-APK
-          path: ${{ steps.project.outputs.project_dir }}/android/app/build/outputs/apk/debug/app-debug.apk
+          name: PSM-PANTAU-v44.4.0-DEBUG-APK
+          path: ${{ env.PROJECT_ROOT }}/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
