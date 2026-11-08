@@ -31,25 +31,21 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # v4 no longer requests the removed legacy SDK package "tools".
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
-        run: |
-          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
 
       - name: Extract ZIP and locate project root
-        id: project
         shell: bash
         run: |
           set -euo pipefail
-          ZIP="$(find . -maxdepth 3 -type f \( -name 'PSM-PANTAU-v44.4.0-FIX-ANDROID-IME.zip' -o -name 'PSM-PANTAU-*.zip' \) -not -path './.git/*' | sort | head -n 1)"
+          ZIP="$(find . -maxdepth 3 -type f -name 'PSM-PANTAU-v44.4.0-FIX-ANDROID-IME.zip' -not -path './.git/*' | head -n 1)"
           if [ -z "$ZIP" ]; then
-            echo "ZIP sumber PSM Pantau tidak ditemukan. Upload PSM-PANTAU-v44.4.0-FIX-ANDROID-IME.zip ke root repository."
-            find . -maxdepth 3 -type f | sort | head -n 100
+            echo "ZIP sumber tidak ditemukan. Upload PSM-PANTAU-v44.4.0-FIX-ANDROID-IME.zip ke root repository."
             exit 1
           fi
-          echo "Menggunakan ZIP: $ZIP"
           mkdir -p "$GITHUB_WORKSPACE/source"
           unzip -q "$ZIP" -d "$GITHUB_WORKSPACE/source"
           ROOT="$(find "$GITHUB_WORKSPACE/source" -type f -name package.json -printf '%h\n' | while read -r d; do
@@ -59,8 +55,8 @@ jobs:
             fi
           done)"
           if [ -z "$ROOT" ]; then
-            echo "Folder proyek tidak ditemukan di dalam ZIP. Isi ZIP:"
-            find "$GITHUB_WORKSPACE/source" -maxdepth 4 -type f | sort | head -n 150
+            echo "Struktur proyek tidak ditemukan di dalam ZIP."
+            find "$GITHUB_WORKSPACE/source" -maxdepth 4 -type f | head -n 100
             exit 1
           fi
           echo "PROJECT_ROOT=$ROOT" >> "$GITHUB_ENV"
