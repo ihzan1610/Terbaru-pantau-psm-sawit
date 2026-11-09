@@ -41,9 +41,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ZIP="$(find . -maxdepth 3 -type f -name 'PSM-PANTAU-v44.4.0-FIX-ANDROID-IME.zip' -not -path './.git/*' | head -n 1)"
+          ZIP="$(find . -maxdepth 3 -type f -name 'PSM-PANTAU-v44.4.0-FIX-ANDROID-IME*.zip' -not -path './.git/*' | head -n 1)"
           if [ -z "$ZIP" ]; then
-            echo "ZIP sumber tidak ditemukan. Upload PSM-PANTAU-v44.4.0-FIX-ANDROID-IME.zip ke root repository."
+            echo "ZIP sumber tidak ditemukan. Upload ZIP source PSM Pantau v44.4.0 ke root repository."
             exit 1
           fi
           mkdir -p "$GITHUB_WORKSPACE/source"
