@@ -5,7 +5,7 @@ const web=path.join(root,'www/index.html');
 const android=path.join(root,'android/app/src/main/assets/index.html');
 let html=fs.readFileSync(web,'utf8');
 const css=[
-'/* PSM Pantau UI refinement v44.5.0 — safe areas, readability and touch comfort */',
+'/* PSM Pantau UI refinement v44.6.0 — safe areas, readability and touch comfort */',
 ':root{--psm-green:#35a979;--psm-green-dark:#247c5a;--psm-green-soft:#eaf5ed;--psm-ink:#244638;--psm-muted:#718278;--psm-line:#dce8dc;--psm-radius:16px;--psm-safe-top:env(safe-area-inset-top,0px);--psm-safe-bottom:env(safe-area-inset-bottom,0px)}',
 'html{min-height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-behavior:smooth}',
 'body{min-height:100%;overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent}',
@@ -27,13 +27,13 @@ const css=[
 '.section,.data-section{margin-top:12px!important;margin-bottom:12px!important}',
 '.table-wrap,.table-container{margin-top:8px!important;margin-bottom:8px!important}',
 'th,td{padding-top:7px!important;padding-bottom:7px!important}',
-'@media(max-width:600px){.card,.panel,.section-card,.form-card,.content-card{padding-left:12px!important;padding-right:12px!important}.form-group,.form-row,.field-group,.input-group{margin-bottom:8px!important}.form-grid,.input-grid,.fields-grid{row-gap:8px!important;column-gap:8px!important}}'
+'@media(max-width:600px){.card,.panel,.section-card,.form-card,.content-card{padding-left:12px!important;padding-right:12px!important}.form-group,.form-row,.field-group,.input-group{margin-bottom:8px!important}.form-grid,.input-grid,.fields-grid{row-gap:8px!important;column-gap:8px!important}}',
 '@media(max-width:480px){.modal,.settings-modal,[role=dialog]{max-width:calc(100vw - 20px)}input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px}}',
 '@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}'
 ].join('\n');
 if(!html.includes('PSM Pantau UI refinement v44.5.0')){
  if(!html.includes('</head>'))throw Error('Head HTML tidak ditemukan');
- html=html.replace('</head>','<style id="psm-ui-refinement-v445">'+css+'</style>\n</head>');
+ html=html.replace('</head>','<style id="psm-ui-refinement-v446">'+css+'</style>\n</head>');
 }
 if(!/name=["']viewport["']/.test(html))html=html.replace('<head>','<head><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">');
 fs.writeFileSync(web,html);fs.writeFileSync(android,html);
