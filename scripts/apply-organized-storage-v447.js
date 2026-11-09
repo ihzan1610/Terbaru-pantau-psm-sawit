@@ -14,7 +14,7 @@ if(!j.includes('PSM_ORGANIZED_STORAGE_V447')){
 }
 let h=fs.readFileSync(wp,'utf8');if(!h.includes('PSM_ORGANIZED_DOWNLOAD_ROUTER_V447')){const s=`
 <script id="psm-organized-download-router-v447">
-/* Route generated APK downloads into the app-specific folder tree. */
+/* PSM_ORGANIZED_DOWNLOAD_ROUTER_V447: route generated files into the app-specific folder tree. */
 (function(){if(!window.Android||typeof window.Android.saveBase64File!=='function')return;
 function route(a){if(!a||a.dataset.psmRouted==='1')return;a.dataset.psmRouted='1';const name=a.download||'PSM_FILE.bin',href=a.href||'';
 const send=data=>{try{window.Android.saveBase64File(name,data)}catch(e){console.error('PSM file save failed',e)}};
