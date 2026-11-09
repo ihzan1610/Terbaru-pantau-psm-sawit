@@ -21,8 +21,10 @@ const send=data=>{try{window.Android.saveBase64File(name,data)}catch(e){console.
 if(href.startsWith('data:')){send(href);return}fetch(href).then(r=>{if(!r.ok)throw Error('File sementara tidak terbaca');return r.blob()}).then(b=>{const fr=new FileReader();fr.onload=()=>send(fr.result);fr.readAsDataURL(b)}).catch(e=>console.error(e))}
 document.addEventListener('click',e=>{const a=e.target&&e.target.closest?e.target.closest('a[download]'):null;if(a&&/^(blob:|data:)/.test(a.href||'')){e.preventDefault();e.stopImmediatePropagation();route(a)}},true)})();
 </script>`;
- h=h.replace('</body>',s+'\n</body>');fs.writeFileSync(wp,h);fs.writeFileSync(ap,h);
+ h=h.replace('</body>',s+'\n</body>');fs.writeFileSync(wp,h);
 }
+// Always keep the Android WebView asset byte-for-byte synchronized with www.
+fs.writeFileSync(ap,fs.readFileSync(wp,'utf8'));
 const gp=path.join(root,'android/app/build.gradle');fs.writeFileSync(gp,fs.readFileSync(gp,'utf8').replace('versionCode 48','versionCode 49').replace("versionName '44.4.0'","versionName '44.7.0'"));
 const pp=path.join(root,'package.json'),pkg=JSON.parse(fs.readFileSync(pp,'utf8'));pkg.version='44.7.0';fs.writeFileSync(pp,JSON.stringify(pkg,null,2)+'\n');
 for(const f of fs.readdirSync(path.join(root,'tests')).filter(x=>x.endsWith('.test.js'))){const p=path.join(root,'tests',f);let t=fs.readFileSync(p,'utf8').replaceAll('versionCode 48','versionCode 49').replaceAll('44\\.4\\.0','44\\.7\\.0').replaceAll("p.version,'44.4.0'","p.version,'44.7.0'");fs.writeFileSync(p,t)}
