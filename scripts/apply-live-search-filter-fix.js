@@ -157,7 +157,8 @@ gradle=gradle.replace(/versionName ['"]44\.4\.[0-9]+['"]/, "versionName '44.4.2'
 fs.writeFileSync(gradlePath,gradle);
 for(const name of fs.readdirSync(path.join(root,'tests')).filter(n=>n.endsWith('.test.js'))){
  const p=path.join(root,'tests',name); let t=fs.readFileSync(p,'utf8');
- t=t.split('44\\.4\\.0').join('44\\.4\\.2');\n t=t.split('44\\.4.0').join('44\\.4.2');
+ t=t.split('44\\.4\\.0').join('44\\.4\\.2');
+ t=t.split('44\\.4.0').join('44\\.4.2');
  t=t.split("'44.4.1'").join("'44.4.2'");
  t=t.split('versionCode 49').join('versionCode 50');
  t=t.split('PSM-PANTAU-v44\\.4\\.2-FIX-ANDROID-IME').join('PSM-PANTAU-v44\\.4\\.0-FIX-ANDROID-IME');
@@ -170,7 +171,8 @@ for(const name of fs.readdirSync(path.join(root,'tests')).filter(n=>n.endsWith('
  t=t.split('versionCode 48').join('versionCode 50');
  t=t.split('versionCode 49').join('versionCode 50');
  t=t.split('44\\.4\\.0').join('44\\.4\\.2');
- t=t.split('44\\.4\\.1').join('44\\.4\\.2');\n t=t.split('44\\.4.1').join('44\\.4.2');
+ t=t.split('44\\.4\\.1').join('44\\.4\\.2');
+ t=t.split('44\\.4.1').join('44\\.4.2');
  t=t.split("'44.4.0'").join("'44.4.2'");
  t=t.split("'44.4.1'").join("'44.4.2'");
  fs.writeFileSync(p,t);
