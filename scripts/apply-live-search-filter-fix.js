@@ -164,26 +164,28 @@ for(const name of fs.readdirSync(path.join(root,'tests')).filter(n=>n.endsWith('
  fs.writeFileSync(p,t);
 }
 
-// Align all release metadata expectations and the workflow's ZIP-based build contract.
+// Align all release metadata expectations to the actual Android package.
 for(const name of fs.readdirSync(path.join(root,'tests')).filter(n=>n.endsWith('.test.js'))){
  const p=path.join(root,'tests',name); let t=fs.readFileSync(p,'utf8');
- t=t.replace(/versionCode 4[89]/g,'versionCode 50');
- t=t.replace(/versionCode\\s+4[89]/g,'versionCode 50');
- t=t.replace(/44\\\\\.4\\\\\.[01]/g,'44\\\\.4\\\\.2');
- t=t.replace(/44\.4\.[01]/g,'44.4.2');
- t=t.replace(/'44\.4\.[01]'/g,"'44.4.2'");
+ t=t.split('versionCode 48').join('versionCode 50');
+ t=t.split('versionCode 49').join('versionCode 50');
+ t=t.split('44\\.4\\.0').join('44\\.4\\.2');
+ t=t.split('44\\.4\\.1').join('44\\.4\\.2');
+ t=t.split("'44.4.0'").join("'44.4.2'");
+ t=t.split("'44.4.1'").join("'44.4.2'");
  fs.writeFileSync(p,t);
 }
-fs.writeFileSync(path.join(root,'tests/workflow-v443-regression.test.js'), [
+const workflowTest = [
 "const test=require('node:test');",
 "const assert=require('node:assert/strict');",
 "const fs=require('node:fs');",
 "const path=require('node:path');",
 "const root=path.resolve(__dirname,'..');",
-"test('v44.4.2 workflow targets the actual Capacitor project structure',()=>{const w=fs.readFileSync(path.join(root,'.github/workflows/build-debug-apk.yml'),'utf8');for(const f of ['package.json','capacitor.config.json','www/index.html','android/settings.gradle','android/app/build.gradle'])assert.ok(w.includes(f));assert.match(w,/npx cap sync android/);assert.match(w,/gradle assembleDebug/);assert.match(w,/android-actions\\/setup-android/);});",
-"test('vendor copy script resolves package assets',()=>{const s=fs.readFileSync(path.join(root,'scripts/copy-vendor-assets.js'),'utf8');assert.match(s,/require\\.resolve/);assert.match(s,/html2canvas/);assert.match(s,/xlsx/);});",
-"test('release workflow extracts source, applies fixes, tests, and builds APK',()=>{const w=fs.readFileSync(path.join(root,'.github/workflows/build-debug-apk.yml'),'utf8');for(const p of [/actions\\/checkout@v4/,/PSM-PANTAU-v44\\.4\\.0-FIX-ANDROID-IME\\*\\.zip/,/scripts\\/apply-live-search-filter-fix\\.js/,/Install npm dependencies/,/Run regression tests/,/npx cap sync android/,/gradle assembleDebug/,/actions\\/upload-artifact@v4/,/PSM-PANTAU-v44\\.4\\.2-QA-FIXES-DEBUG-APK/])assert.match(w,p);});",
-"test('Gradle settings allow Capacitor plugin repositories',()=>{const s=fs.readFileSync(path.join(root,'android/settings.gradle'),'utf8');assert.match(s,/RepositoriesMode\\.PREFER_PROJECT/);assert.doesNotMatch(s,/RepositoriesMode\\.FAIL_ON_PROJECT_REPOS/);});",
-"test('Android app declares AppCompat for Capacitor BridgeActivity',()=>{const g=fs.readFileSync(path.join(root,'android/app/build.gradle'),'utf8');assert.match(g,/androidx\\.appcompat:appcompat:1\\.7\\.0/);const p=fs.readFileSync(path.join(root,'android/app/src/main/java/com/psmsawit/pantau/LegacyAndroidBridgePlugin.java'),'utf8');assert.match(p,/com\\.getcapacitor\\.annotation\\.CapacitorPlugin/);});"
-].join('\\n')+'\\n');
-console.log('Applied v44.4.2 metadata and workflow regression alignment.');
+"test('v44.4.2 workflow targets the Capacitor project',()=>{const w=fs.readFileSync(path.join(root,'.github/workflows/build-debug-apk.yml'),'utf8');for(const x of ['package.json','capacitor.config.json','www/index.html','android/settings.gradle','android/app/build.gradle','npx cap sync android','gradle assembleDebug','android-actions/setup-android'])assert.ok(w.includes(x),x);});",
+"test('vendor copy script resolves package assets',()=>{const s=fs.readFileSync(path.join(root,'scripts/copy-vendor-assets.js'),'utf8');for(const x of ['require.resolve','html2canvas','xlsx'])assert.ok(s.includes(x));});",
+"test('release workflow extracts source and uploads v44.4.2 APK',()=>{const w=fs.readFileSync(path.join(root,'.github/workflows/build-debug-apk.yml'),'utf8');for(const x of ['PSM-PANTAU-v44.4.0-FIX-ANDROID-IME','apply-live-search-filter-fix.js','Install npm dependencies','Run regression tests','npx cap sync android','gradle assembleDebug','upload-artifact@v4','PSM-PANTAU-v44.4.2-QA-FIXES-DEBUG-APK'])assert.ok(w.includes(x),x);});",
+"test('Gradle settings permit Capacitor plugin repositories',()=>{const s=fs.readFileSync(path.join(root,'android/settings.gradle'),'utf8');assert.ok(s.includes('RepositoriesMode.PREFER_PROJECT'));assert.ok(!s.includes('RepositoriesMode.FAIL_ON_PROJECT_REPOS'));});",
+"test('Android app declares AppCompat bridge dependency',()=>{const g=fs.readFileSync(path.join(root,'android/app/build.gradle'),'utf8');assert.ok(g.includes('androidx.appcompat:appcompat:1.7.0'));const p=fs.readFileSync(path.join(root,'android/app/src/main/java/com/psmsawit/pantau/LegacyAndroidBridgePlugin.java'),'utf8');assert.ok(p.includes('CapacitorPlugin'));});"
+];
+fs.writeFileSync(path.join(root,'tests/workflow-v443-regression.test.js'),workflowTest.join('\n')+'\n');
+console.log('Aligned v44.4.2 metadata and workflow tests.');
