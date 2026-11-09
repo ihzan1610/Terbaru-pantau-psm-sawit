@@ -1,4 +1,4 @@
-name: Build PSM Pantau v44.7.0 UI Refinement APK
+name: Build PSM Pantau v44.7.0 Organized Storage APK
 
 on:
   workflow_dispatch:
