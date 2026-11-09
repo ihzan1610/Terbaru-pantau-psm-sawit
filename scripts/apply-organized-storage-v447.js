@@ -21,7 +21,7 @@ const send=data=>{try{window.Android.saveBase64File(name,data)}catch(e){console.
 if(href.startsWith('data:')){send(href);return}fetch(href).then(r=>{if(!r.ok)throw Error('File sementara tidak terbaca');return r.blob()}).then(b=>{const fr=new FileReader();fr.onload=()=>send(fr.result);fr.readAsDataURL(b)}).catch(e=>console.error(e))}
 document.addEventListener('click',e=>{const a=e.target&&e.target.closest?e.target.closest('a[download]'):null;if(a&&/^(blob:|data:)/.test(a.href||'')){e.preventDefault();e.stopImmediatePropagation();route(a)}},true)})();
 </script>`;
- h=h.replace('</body>',s+'\n</body>');fs.writeFileSync(wp,h);
+ if(h.includes('</body>'))h=h.replace('</body>',s+'\n</body>');else h+='\n'+s+'\n';fs.writeFileSync(wp,h);
 }
 // Always keep the Android WebView asset byte-for-byte synchronized with www.
 fs.writeFileSync(ap,fs.readFileSync(wp,'utf8'));
