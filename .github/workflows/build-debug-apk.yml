@@ -128,6 +128,29 @@ jobs:
           ls -lh "$APK"
           sha256sum "$APK"
 
+      - name: Assemble source, workflow, and APK package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/release/Source-Patch"
+          cp "$PROJECT_ROOT/android/app/build/outputs/apk/debug/app-debug.apk" "$GITHUB_WORKSPACE/release/PSM-PANTAU-v44.6.0.apk"
+          cp "$GITHUB_WORKSPACE/PSM-PANTAU-v44.4.0-FIX-ANDROID-IME-WORKFLOW2.zip" "$GITHUB_WORKSPACE/release/Source-Asli-v44.4.0.zip"
+          cp "$GITHUB_WORKSPACE/scripts/apply-live-search-filter-fix.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
+          cp "$GITHUB_WORKSPACE/scripts/apply-recap-ongkos-fix.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
+          cp "$GITHUB_WORKSPACE/scripts/apply-ui-refinement.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
+          cp "$GITHUB_WORKSPACE/.github/workflows/build-debug-apk.yml" "$GITHUB_WORKSPACE/release/build-debug-apk.yml"
+          cp "$GITHUB_WORKSPACE/README.md" "$GITHUB_WORKSPACE/release/README.md" 2>/dev/null || true
+          cd "$GITHUB_WORKSPACE"
+          zip -qr PSM-PANTAU-v44.6.0-PAKET-LENGKAP.zip release
+
+      - name: Upload Complete Release Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: PSM-PANTAU-v44.6.0-PAKET-LENGKAP
+          path: PSM-PANTAU-v44.6.0-PAKET-LENGKAP.zip
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
