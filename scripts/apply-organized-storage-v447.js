@@ -27,7 +27,7 @@ document.addEventListener('click',e=>{const a=e.target&&e.target.closest?e.targe
 fs.writeFileSync(ap,fs.readFileSync(wp,'utf8'));
 const gp=path.join(root,'android/app/build.gradle');fs.writeFileSync(gp,fs.readFileSync(gp,'utf8').replace('versionCode 48','versionCode 49').replace("versionName '44.4.0'","versionName '44.7.0'"));
 const pp=path.join(root,'package.json'),pkg=JSON.parse(fs.readFileSync(pp,'utf8'));pkg.version='44.7.0';fs.writeFileSync(pp,JSON.stringify(pkg,null,2)+'\n');
-for(const f of fs.readdirSync(path.join(root,'tests')).filter(x=>x.endsWith('.test.js'))){const p=path.join(root,'tests',f);let t=fs.readFileSync(p,'utf8').replaceAll('versionCode 48','versionCode 49').replaceAll('44\\.4\\.0','44\\.7\\.0').replaceAll("p.version,'44.4.0'","p.version,'44.7.0'");fs.writeFileSync(p,t)}
+for(const f of fs.readdirSync(path.join(root,'tests')).filter(x=>x.endsWith('.test.js'))){const p=path.join(root,'tests',f);let t=fs.readFileSync(p,'utf8').replaceAll('versionCode 48','versionCode 49').replaceAll('44\\.4\\.0','44\\.7\\.0').replaceAll("p.version,'44.4.0'","p.version,'44.7.0'").replaceAll("'44.4.3'","'44.7.0'").replaceAll('"44.4.3"','"44.7.0"');fs.writeFileSync(p,t)}
 console.log('Organized storage v44.7.0 applied');
 
 for(const file of fs.readdirSync(path.join(root,'tests')).filter(x=>x.endsWith('.test.js'))){
