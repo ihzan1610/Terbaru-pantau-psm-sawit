@@ -83,10 +83,17 @@ jobs:
       - name: Verify organized storage patch
         run: |
           set -euo pipefail
-          grep -q 'PSM_ORGANIZED_STORAGE_V447' "$PROJECT_ROOT/android/app/src/main/java/com/psmsawit/pantau/MainActivity.java"
-          grep -q 'PSM_ORGANIZED_DOWNLOAD_ROUTER_V447' "$PROJECT_ROOT/www/index.html"
-          grep -q 'Database APK Pantau PSM Sawit' "$PROJECT_ROOT/android/app/src/main/java/com/psmsawit/pantau/MainActivity.java"
-          cmp "$PROJECT_ROOT/www/index.html" "$PROJECT_ROOT/android/app/src/main/assets/index.html"
+          MAIN="$PROJECT_ROOT/android/app/src/main/java/com/psmsawit/pantau/MainActivity.java"
+          WEB="$PROJECT_ROOT/www/index.html"
+          ASSET="$PROJECT_ROOT/android/app/src/main/assets/index.html"
+          echo "Checking storage marker in $MAIN"
+          grep -n 'PSM_ORGANIZED_STORAGE_V447' "$MAIN"
+          echo "Checking download router in $WEB"
+          grep -n 'PSM_ORGANIZED_DOWNLOAD_ROUTER_V447' "$WEB"
+          echo "Checking target folder in native storage code"
+          grep -n 'Database APK Pantau PSM Sawit' "$MAIN"
+          echo "Checking WebView asset synchronization"
+          cmp "$WEB" "$ASSET" || { echo "www/index.html and Android asset differ"; diff -u "$WEB" "$ASSET" | head -n 80; exit 1; }
 
       - name: Verify project files
         run: |
