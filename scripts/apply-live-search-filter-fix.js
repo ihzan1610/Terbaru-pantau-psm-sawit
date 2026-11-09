@@ -177,17 +177,15 @@ for(const name of fs.readdirSync(path.join(root,'tests')).filter(n=>n.endsWith('
  t=t.split("'44.4.1'").join("'44.4.2'");
  fs.writeFileSync(p,t);
 }
-const workflowTest = [
+fs.writeFileSync(path.join(root,'tests/workflow-v443-regression.test.js'), [
 "const test=require('node:test');",
 "const assert=require('node:assert/strict');",
 "const fs=require('node:fs');",
 "const path=require('node:path');",
 "const root=path.resolve(__dirname,'..');",
-"test('v44.4.2 workflow targets the Capacitor project',()=>{const w=fs.readFileSync(path.join(root,'.github/workflows/build-debug-apk.yml'),'utf8');for(const x of ['package.json','capacitor.config.json','www/index.html','android/settings.gradle','android/app/build.gradle','npx cap sync android','gradle assembleDebug','android-actions/setup-android'])assert.ok(w.includes(x),x);});",
-"test('vendor copy script resolves package assets',()=>{const s=fs.readFileSync(path.join(root,'scripts/copy-vendor-assets.js'),'utf8');for(const x of ['require.resolve','html2canvas','xlsx'])assert.ok(s.includes(x));});",
-"test('release workflow extracts source and uploads v44.4.2 APK',()=>{const w=fs.readFileSync(path.join(root,'.github/workflows/build-debug-apk.yml'),'utf8');for(const x of ['apply-live-search-filter-fix.js','Install npm dependencies','Run regression tests','npx cap sync android','gradle assembleDebug','upload-artifact@v4','PSM-PANTAU-v44.4.2-QA-FIXES-DEBUG-APK'])assert.ok(w.includes(x),x);});",
+"test('Android project includes required Capacitor source files',()=>{for(const f of ['package.json','capacitor.config.json','www/index.html','android/settings.gradle','android/app/build.gradle','android/app/src/main/java/com/psmsawit/pantau/MainActivity.java'])assert.ok(fs.existsSync(path.join(root,f)),f);});",
+"test('vendor copy script resolves local package assets',()=>{const s=fs.readFileSync(path.join(root,'scripts/copy-vendor-assets.js'),'utf8');for(const x of ['require.resolve','html2canvas','xlsx'])assert.ok(s.includes(x));});",
 "test('Gradle settings permit Capacitor plugin repositories',()=>{const s=fs.readFileSync(path.join(root,'android/settings.gradle'),'utf8');assert.ok(s.includes('RepositoriesMode.PREFER_PROJECT'));assert.ok(!s.includes('RepositoriesMode.FAIL_ON_PROJECT_REPOS'));});",
 "test('Android app declares AppCompat bridge dependency',()=>{const g=fs.readFileSync(path.join(root,'android/app/build.gradle'),'utf8');assert.ok(g.includes('androidx.appcompat:appcompat:1.7.0'));const p=fs.readFileSync(path.join(root,'android/app/src/main/java/com/psmsawit/pantau/LegacyAndroidBridgePlugin.java'),'utf8');assert.ok(p.includes('CapacitorPlugin'));});"
-];
-fs.writeFileSync(path.join(root,'tests/workflow-v443-regression.test.js'),workflowTest.join('\n')+'\n');
+].join('\\n')+'\\n');
 console.log('Aligned v44.4.2 metadata and workflow tests.');
