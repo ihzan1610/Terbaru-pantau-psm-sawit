@@ -1,0 +1,25 @@
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(process.argv[2]||'.');
+const web=path.join(root,'www/index.html');
+const android=path.join(root,'android/app/src/main/assets/index.html');
+let h=fs.readFileSync(web,'utf8');
+const oldBuild='let detail=Object.entries(owners).map(([owner,items])=>({owner,items,net:items.reduce((s,x)=>s+x.net,0),gross:items.reduce((s,x)=>s+x.amount,0)}));';
+const newBuild='let detail=Object.entries(owners).map(([owner,items])=>{let m=new Map();items.forEach(x=>{let k=String(x.rate),v=m.get(k)||{rate:x.rate,net:0,amount:0};v.net+=x.net;v.amount+=x.amount;m.set(k,v);});return {owner,rates:[...m.values()].sort((a,b)=>a.rate-b.rate),net:items.reduce((s,x)=>s+x.net,0),gross:items.reduce((s,x)=>s+x.amount,0)};});';
+if(!h.includes(oldBuild))throw Error('Owner grouping missing');h=h.replace(oldBuild,newBuild);
+const oldPrint='r.detail.forEach(o=>t.push(`${o.owner}: ${fmt(o.net)} kg | ${rp(o.gross)}`));';
+const newPrint='r.detail.forEach(o=>{t.push(o.owner);o.rates.forEach(v=>t.push(`${fmt(v.net)} kg × ${rp(v.rate)} = ${rp(v.amount)}`));});';
+if(!h.includes(oldPrint))throw Error('Print grouping missing');h=h.replace(oldPrint,newPrint);
+const oldSave='owners:r.detail.map(x=>({owner:x.owner,net:x.net,amount:x.gross}))';
+const newSave='owners:r.detail.map(x=>({owner:x.owner,net:x.net,amount:x.gross,rates:x.rates.map(v=>({...v}))}))';
+if(!h.includes(oldSave))throw Error('Save grouping missing');h=h.replace(oldSave,newSave);
+const start='${r.detail.map(o=>`<div class="pl-result-line"><span>${esc(o.owner)} · ${fmt(o.net)} kg</span><b>${rp(o.gross)}</b></div>`).join(\'\')}<div class="pl-result-line"><b>Total ongkos murni</b><b>${rp(r.gross)}</b></div>';
+const end='${r.detail.map(o=>`<div class="pl-owner-rate-group"><b class="pl-owner-name">${esc(o.owner)}</b>${o.rates.map(v=>`<div class="pl-result-line"><span>${fmt(v.net)} kg × ${rp(v.rate)}</span><b>${rp(v.amount)}</b></div>`).join(\'\')}</div>`).join(\'\')}';
+if(!h.includes(start))throw Error('Result markup missing');h=h.replace(start,end);
+if(!h.includes('#preview-modal{z-index:1300'))h=h.replace('</style>','\n#preview-modal{z-index:1300!important;pointer-events:auto}\n</style>');
+if(!h.includes('.pl-owner-rate-group{'))h=h.replace('</style>','\n.pl-owner-rate-group{padding:8px 0;border-bottom:1px solid var(--border,#e2e8f0)}.pl-owner-rate-group:last-child{border-bottom:0}.pl-owner-name{display:block;margin:0 0 3px;font-size:13px}\n</style>');
+fs.writeFileSync(web,h);fs.writeFileSync(android,h);
+const pp=path.join(root,'package.json');const pkg=JSON.parse(fs.readFileSync(pp,'utf8'));pkg.version='44.4.3';fs.writeFileSync(pp,JSON.stringify(pkg,null,2)+'\n');
+const gp=path.join(root,'android/app/build.gradle');let g=fs.readFileSync(gp,'utf8').replace(/versionCode\s+\d+/,'versionCode 51').replace(/versionName ['"]44\.4\.[0-9]+['"]/ ,"versionName '44.4.3'");fs.writeFileSync(gp,g);
+for(const n of fs.readdirSync(path.join(root,'tests')).filter(x=>x.endsWith('.test.js'))){const p=path.join(root,'tests',n);let t=fs.readFileSync(p,'utf8').split('44.4.2').join('44.4.3').split('versionCode 50').join('versionCode 51');fs.writeFileSync(p,t);}
+fs.writeFileSync(path.join(root,'tests/recap-ongkos-tariff-regression.test.js'),"const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');\nconst root=path.resolve(__dirname,'..'),h=fs.readFileSync(path.join(root,'www/index.html'),'utf8'),a=fs.readFileSync(path.join(root,'android/app/src/main/assets/index.html'),'utf8');\ntest('Recap tariff grouping',()=>{assert.match(h,/rates:\\[\\.\\.\\.m\\.values\\(\\)\\]/);assert.match(h,/o\\.rates\\.map/);assert.doesNotMatch(h,/Total ongkos murni/);});\ntest('Preview layer',()=>assert.match(h,/#preview-modal\\{z-index:1300!important/));\ntest('Web and Android assets match',()=>assert.equal(h,a));\n");
