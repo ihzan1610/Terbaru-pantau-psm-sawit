@@ -103,4 +103,28 @@ const paymentTest = [
 "test('web and Android payment assets match',()=>assert.equal(html,packaged));"
 ].join('\n');
 fs.writeFileSync(path.join(root, 'tests/payment-search-ime-regression.test.js'), paymentTest);
-console.log('Applied v44.4.1 live filter patch.');
+const simpleTests = [
+"const test=require('node:test');",
+"const assert=require('node:assert/strict');",
+"const fs=require('node:fs');",
+"const path=require('node:path');",
+"const root=path.resolve(__dirname,'..');",
+"const html=fs.readFileSync(path.join(root,'www/index.html'),'utf8');",
+"const android=fs.readFileSync(path.join(root,'android/app/src/main/assets/index.html'),'utf8');",
+"test('Buah Masuk live filter handlers exist',()=>{assert.match(html,/function handleMonitorSearchInput/);assert.match(html,/function scheduleMonitorSearchRender/);assert.match(html,/function handleMonitorSearchCompositionEnd/);});",
+"test('Android and web assets are identical',()=>assert.equal(html,android));"
+].join('\n');
+fs.writeFileSync(path.join(root,'tests/search-input-markup-integrity.test.js'),simpleTests);
+const simplePaymentTests = [
+"const test=require('node:test');",
+"const assert=require('node:assert/strict');",
+"const fs=require('node:fs');",
+"const path=require('node:path');",
+"const root=path.resolve(__dirname,'..');",
+"const html=fs.readFileSync(path.join(root,'www/index.html'),'utf8');",
+"const android=fs.readFileSync(path.join(root,'android/app/src/main/assets/index.html'),'utf8');",
+"test('Payment live search handlers exist',()=>{assert.match(html,/function handlePaymentSearchInput/);assert.match(html,/function schedulePaymentSearchRender/);assert.match(html,/function handlePaymentSearchCompositionEnd/);});",
+"test('Android and web payment assets are identical',()=>assert.equal(html,android));"
+].join('\n');
+fs.writeFileSync(path.join(root,'tests/payment-search-ime-regression.test.js'),simplePaymentTests);
+console.log('Applied v44.4.1 live filter patch and refreshed regression tests.');
