@@ -187,5 +187,5 @@ fs.writeFileSync(path.join(root,'tests/workflow-v443-regression.test.js'), [
 "test('vendor copy script resolves local package assets',()=>{const s=fs.readFileSync(path.join(root,'scripts/copy-vendor-assets.js'),'utf8');for(const x of ['require.resolve','html2canvas','xlsx'])assert.ok(s.includes(x));});",
 "test('Gradle settings permit Capacitor plugin repositories',()=>{const s=fs.readFileSync(path.join(root,'android/settings.gradle'),'utf8');assert.ok(s.includes('RepositoriesMode.PREFER_PROJECT'));assert.ok(!s.includes('RepositoriesMode.FAIL_ON_PROJECT_REPOS'));});",
 "test('Android app declares AppCompat bridge dependency',()=>{const g=fs.readFileSync(path.join(root,'android/app/build.gradle'),'utf8');assert.ok(g.includes('androidx.appcompat:appcompat:1.7.0'));const p=fs.readFileSync(path.join(root,'android/app/src/main/java/com/psmsawit/pantau/LegacyAndroidBridgePlugin.java'),'utf8');assert.ok(p.includes('CapacitorPlugin'));});"
-].join('\\n')+'\\n');
+].join('\n')+'\n');
 console.log('Aligned v44.4.2 metadata and workflow tests.');
