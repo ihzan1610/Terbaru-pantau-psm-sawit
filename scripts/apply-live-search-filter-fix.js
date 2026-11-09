@@ -145,4 +145,17 @@ fs.writeFileSync(path.join(root,'tests/pin-policy-consistency-v441.test.js'), [
 "test('web and Android PIN assets match',()=>assert.equal(html,android));"
 ].join('\n'));
 
-console.log('Applied v44.4.1 live filter patch and refreshed regression tests.');
+// Align release metadata and regression expectations for v44.4.2.
+const packagePath=path.join(root,'package.json');
+const pkg=JSON.parse(fs.readFileSync(packagePath,'utf8')); pkg.version='44.4.2'; fs.writeFileSync(packagePath,JSON.stringify(pkg,null,2)+'\\n');
+const gradlePath=path.join(root,'android/app/build.gradle');
+let gradle=fs.readFileSync(gradlePath,'utf8').replace(/versionCode\\s+\\d+/, 'versionCode 50').replace(/versionName ['\\"]44\\.4\\.[0-9]+['\\"]/, "versionName '44.4.2'");
+fs.writeFileSync(gradlePath,gradle);
+for(const name of fs.readdirSync(path.join(root,'tests')).filter(n=>n.endsWith('.test.js'))){
+ const p=path.join(root,'tests',name); let t=fs.readFileSync(p,'utf8');
+ t=t.replace(/44\\\\\\.4\\\\\\.0/g,'44\\\\\\.4\\\\\\.2').replace(/44\\\\\\.4\\\\\.0/g,'44\\\\\\.4\\\\\.2').replace(/44\\\\\.4\\\\\.0/g,'44\\\\\.4\\\\\.2');
+ t=t.replace(/'44\\.4\\.1'/g,"'44.4.2'").replace(/versionCode 49/g,'versionCode 50');
+ t=t.replace(/PSM-PANTAU-v44\\\\\.4\\\\\.2-FIX-ANDROID-IME/g,'PSM-PANTAU-v44\\\\\.4\\\\\.0-FIX-ANDROID-IME');
+ fs.writeFileSync(p,t);
+}
+\nconsole.log('Applied v44.4.2 live filter, PIN policy, and release metadata fixes.');
