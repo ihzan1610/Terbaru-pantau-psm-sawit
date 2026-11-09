@@ -1,0 +1,5 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),root=path.resolve(__dirname,'..');
+const j=fs.readFileSync(path.join(root,'android/app/src/main/java/com/psmsawit/pantau/MainActivity.java'),'utf8'),h=fs.readFileSync(path.join(root,'www/index.html'),'utf8'),a=fs.readFileSync(path.join(root,'android/app/src/main/assets/index.html'),'utf8');
+test('files saved in dedicated shared internal PSM directory',()=>{assert.match(j,/PSM_ORGANIZED_STORAGE_V447/);assert.match(j,/Database APK Pantau PSM Sawit/);assert.match(j,/MediaStore.MediaColumns.RELATIVE_PATH/);assert.match(j,/saveBytesToOrganizedStorage\(name/);});
+test('all download links routed to native organized storage',()=>{assert.match(h,/PSM_ORGANIZED_DOWNLOAD_ROUTER_V447/);assert.match(h,/a\[download\]/);assert.equal(h,a)});
+test('folder categories are separated',()=>{for(const x of ['Gambar','Backup','Export Excel','Laporan PDF','Nota','File Lainnya'])assert.ok(j.includes('"'+x+'"'))});
