@@ -1,4 +1,4 @@
-name: Build PSM Pantau v44.7.0 Storage Router Fix APK
+name: Build PSM Pantau v44.7.0 Regression Fix APK
 
 on:
   workflow_dispatch:
