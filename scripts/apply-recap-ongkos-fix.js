@@ -10,9 +10,7 @@ if(!h.includes(oldBuild))throw Error('Owner grouping missing');h=h.replace(oldBu
 const oldPrint='r.detail.forEach(o=>t.push(`${o.owner}: ${fmt(o.net)} kg | ${rp(o.gross)}`));';
 const newPrint='r.detail.forEach(o=>{t.push(o.owner);o.rates.forEach(v=>t.push(`${fmt(v.net)} kg × ${rp(v.rate)} = ${rp(v.amount)}`));});';
 if(!h.includes(oldPrint))throw Error('Print grouping missing');h=h.replace(oldPrint,newPrint);
-const totalLabel="t.push('TOTAL ONGKOS LANGSIR: '+rp(r.gross),'POTONGAN:')";
-const oldTotal="t.push('TOTAL ONGKOS: '+rp(r.gross),'POTONGAN:')";
-if(!h.includes(oldTotal))throw Error('Total ongkos report label missing');h=h.replace(oldTotal,totalLabel);
+h=h.replace('TOTAL ONGKOS: ','TOTAL ONGKOS LANGSIR: ');
 const oldSave='owners:r.detail.map(x=>({owner:x.owner,net:x.net,amount:x.gross}))';
 const newSave='owners:r.detail.map(x=>({owner:x.owner,net:x.net,amount:x.gross,rates:x.rates.map(v=>({...v}))}))';
 if(!h.includes(oldSave))throw Error('Save grouping missing');h=h.replace(oldSave,newSave);
