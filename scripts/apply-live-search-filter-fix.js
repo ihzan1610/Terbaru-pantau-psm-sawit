@@ -127,4 +127,22 @@ const simplePaymentTests = [
 "test('Android and web payment assets are identical',()=>assert.equal(html,android));"
 ].join('\n');
 fs.writeFileSync(path.join(root,'tests/payment-search-ime-regression.test.js'),simplePaymentTests);
+// Align PIN change policy with first-time PIN setup: both require 6–12 digits.
+html = html.replace('id="pin-lama" inputmode="numeric" pattern="[0-9]*" autocomplete="off"', 'id="pin-lama" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="off"');
+html = html.replace('id="pin-baru" inputmode="numeric" pattern="[0-9]*" autocomplete="off"', 'id="pin-baru" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="off"');
+html = html.replace("if(!/^\\d{4,12}$/.test(newP))return alert('PIN baru harus 4 sampai 12 angka.');", "if(!/^\\d{6,12}$/.test(newP))return alert('PIN baru harus 6 sampai 12 angka.');");
+fs.writeFileSync(webPath, html);
+fs.writeFileSync(androidPath, html);
+fs.writeFileSync(path.join(root,'tests/pin-policy-consistency-v441.test.js'), [
+"const test=require('node:test');",
+"const assert=require('node:assert/strict');",
+"const fs=require('node:fs');",
+"const path=require('node:path');",
+"const root=path.resolve(__dirname,'..');",
+"const html=fs.readFileSync(path.join(root,'www/index.html'),'utf8');",
+"const android=fs.readFileSync(path.join(root,'android/app/src/main/assets/index.html'),'utf8');",
+"test('PIN setup and PIN change enforce 6–12 digits',()=>{assert.match(html,/setupPinPertama\\(\\)[\\s\\S]*?\\\\d\\{6,12\\}/);assert.match(html,/async function ubahPin\\(\\)[\\s\\S]*?\\\\d\\{6,12\\}/);for(const id of ['pin-lama','pin-baru','pin-setup-new','pin-setup-confirm']){const tag=html.match(new RegExp('<input[^>]*id=\"'+id+'\"[^>]*>'))?.[0]||'';assert.ok(tag,id);assert.match(tag,/maxlength=\"12\"/);}});",
+"test('web and Android PIN assets match',()=>assert.equal(html,android));"
+].join('\n'));
+
 console.log('Applied v44.4.1 live filter patch and refreshed regression tests.');
