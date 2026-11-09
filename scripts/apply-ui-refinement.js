@@ -12,14 +12,22 @@ const css=[
 'button,[role=button],input,select,textarea{font:inherit}',
 'button,[role=button]{touch-action:manipulation}',
 'input,select,textarea{max-width:100%;box-sizing:border-box}',
-'input:not([type=checkbox]):not([type=radio]),select,textarea{min-height:46px;border-radius:12px;line-height:1.35}',
+'input:not([type=checkbox]):not([type=radio]),select,textarea{min-height:42px;border-radius:11px;line-height:1.3}',
 'input:focus,select:focus,textarea:focus,button:focus-visible,[role=button]:focus-visible{outline:2px solid rgba(53,169,121,.55);outline-offset:2px}',
-'button{min-height:42px;border-radius:12px;transition:filter .14s ease,transform .14s ease}',
+'button{min-height:40px;border-radius:11px;transition:filter .14s ease,transform .14s ease}',
 'button:active,[role=button]:active{filter:brightness(.96)}',
 'label{line-height:1.35}img{max-width:100%;height:auto}table{max-width:100%;border-collapse:separate;border-spacing:0}th,td{vertical-align:middle}',
 '.modal,.modal-content,[role=dialog],.settings-modal,.settings-content{box-sizing:border-box;overscroll-behavior:contain}',
 '.modal,.settings-modal,[role=dialog]{max-height:calc(100dvh - var(--psm-safe-top) - var(--psm-safe-bottom) - 16px)}',
 '.modal-content,.settings-content{max-height:calc(100dvh - var(--psm-safe-top) - var(--psm-safe-bottom) - 36px);overflow-y:auto;-webkit-overflow-scrolling:touch}',
+'/* Compact density: retain readable type while reducing excess vertical whitespace. */',
+'.card,.panel,.section-card,.form-card,.content-card{padding-top:12px!important;padding-bottom:12px!important}',
+'.form-group,.form-row,.field-group,.input-group{margin-bottom:10px!important;gap:8px!important}',
+'.form-grid,.input-grid,.fields-grid{row-gap:10px!important;column-gap:10px!important}',
+'.section,.data-section{margin-top:12px!important;margin-bottom:12px!important}',
+'.table-wrap,.table-container{margin-top:8px!important;margin-bottom:8px!important}',
+'th,td{padding-top:7px!important;padding-bottom:7px!important}',
+'@media(max-width:600px){.card,.panel,.section-card,.form-card,.content-card{padding-left:12px!important;padding-right:12px!important}.form-group,.form-row,.field-group,.input-group{margin-bottom:8px!important}.form-grid,.input-grid,.fields-grid{row-gap:8px!important;column-gap:8px!important}}'
 '@media(max-width:480px){.modal,.settings-modal,[role=dialog]{max-width:calc(100vw - 20px)}input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px}}',
 '@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}'
 ].join('\n');
@@ -32,12 +40,22 @@ fs.writeFileSync(web,html);fs.writeFileSync(android,html);
 const main=path.join(root,'android/app/src/main/java/com/psmsawit/pantau/MainActivity.java');
 if(fs.existsSync(main)){
  let java=fs.readFileSync(main,'utf8');
- if(!java.includes('PSM_STATUS_BAR_INSETS_V445')){
+ if(!java.includes('PSM_STATUS_BAR_INSETS_V446')){
   const marker='super.onCreate(savedInstanceState);';
   if(!java.includes(marker))throw Error('MainActivity onCreate marker not found');
   const nativeCode=[
    marker,
-   '        // PSM_STATUS_BAR_INSETS_V445: keep system bars outside WebView content.',
+   '        // PSM_STATUS_BAR_INSETS_V446: keep WebView content below Android system bars.',
+   '        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), true);',
+   '        if (android.os.Build.VERSION.SDK_INT >= 30) {',
+   '            getWindow().getDecorView().setOnApplyWindowInsetsListener((view, windowInsets) -> {',
+   '                android.graphics.Insets bars = windowInsets.getInsets(android.view.WindowInsets.Type.systemBars());',
+   '                android.view.View content = findViewById(android.R.id.content);',
+   '                if (content != null) content.setPadding(bars.left, bars.top, bars.right, bars.bottom);',
+   '                return view.onApplyWindowInsets(windowInsets);',
+   '            });',
+   '            getWindow().getDecorView().requestApplyInsets();',
+   '        }'
    '        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {',
    '            getWindow().setStatusBarColor(android.graphics.Color.rgb(53, 169, 121));',
    '            getWindow().setNavigationBarColor(android.graphics.Color.rgb(243, 248, 241));',
