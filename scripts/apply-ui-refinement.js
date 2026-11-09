@@ -31,7 +31,7 @@ const css=[
 '@media(max-width:480px){.modal,.settings-modal,[role=dialog]{max-width:calc(100vw - 20px)}input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px}}',
 '@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}'
 ].join('\n');
-if(!html.includes('PSM Pantau UI refinement v44.5.0')){
+if(!html.includes('PSM Pantau UI refinement v44.6.0')){
  if(!html.includes('</head>'))throw Error('Head HTML tidak ditemukan');
  html=html.replace('</head>','<style id="psm-ui-refinement-v446">'+css+'</style>\n</head>');
 }
@@ -55,7 +55,7 @@ if(fs.existsSync(main)){
    '                return view.onApplyWindowInsets(windowInsets);',
    '            });',
    '            getWindow().getDecorView().requestApplyInsets();',
-   '        }'
+   '        }',
    '        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {',
    '            getWindow().setStatusBarColor(android.graphics.Color.rgb(53, 169, 121));',
    '            getWindow().setNavigationBarColor(android.graphics.Color.rgb(243, 248, 241));',
