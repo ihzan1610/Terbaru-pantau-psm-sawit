@@ -37,4 +37,9 @@ fs.writeFileSync(web,s);fs.writeFileSync(asset,s);
 const pkg=path.join(root,'package.json'),j=JSON.parse(fs.readFileSync(pkg,'utf8'));j.version='44.8.0';fs.writeFileSync(pkg,JSON.stringify(j,null,2)+'\n');
 const gradle=path.join(root,'android/app/build.gradle');fs.writeFileSync(gradle,fs.readFileSync(gradle,'utf8').replace('versionCode 48','versionCode 50').replace("versionName '44.4.0'","versionName '44.8.0'"));
 for(const f of fs.readdirSync(path.join(root,'tests')).filter(x=>x.endsWith('.test.js'))){const p=path.join(root,'tests',f);let t=fs.readFileSync(p,'utf8').replaceAll("44\\.4.0","44\\.8.0").replaceAll('44.4.0','44.8.0').replace('if(migrationAlreadyComplete&&row&&valid)','if(migrationAlreadyComplete&&row&&valid&&!writeThroughEnabled)');fs.writeFileSync(p,t)}
+// Align pre-existing source regression expectations with the new release version and recovery branch.
+const releaseTest=path.join(root,'tests/release-build-config.test.js');
+if(fs.existsSync(releaseTest)){let t=fs.readFileSync(releaseTest,'utf8').replaceAll('44.7.0','44.8.0');fs.writeFileSync(releaseTest,t);}
+const migrationTest=path.join(root,'tests/technology-migration-v42.test.js');
+if(fs.existsSync(migrationTest)){let t=fs.readFileSync(migrationTest,'utf8').replaceAll('migrationAlreadyComplete&&row&&valid\\\\)', 'migrationAlreadyComplete&&row&&valid(?:&&!writeThroughEnabled)?\\\\)');fs.writeFileSync(migrationTest,t);}
 console.log('PSM Pantau cache/theme v44.8.0 applied');
