@@ -39,6 +39,5 @@ s=s.replace('saveBytesToDownloads(name,mime,b);runOnUiThread(()->Toast.makeText(
 s=s.replace('saveBytesToDownloads(name,safeMime(mime),bytes);runOnUiThread(()->Toast.makeText(MainActivity.this.getApplicationContext(),"File tersimpan di Download: "+name,Toast.LENGTH_LONG).show());','saveImageToGallery(name,safeMime(mime),bytes);runOnUiThread(()->Toast.makeText(MainActivity.this.getApplicationContext(),"Gambar tersimpan di Galeri: Pictures/PSM SAWIT/"+name,Toast.LENGTH_LONG).show());');
 if(!s.includes('saveImageToGallery(name,mime,b)')||!s.includes('saveImageToGallery(name,safeMime(mime),bytes)')||!s.includes('MediaStore.Images.Media.EXTERNAL_CONTENT_URI'))throw Error('Gallery save bridge verification failed');
 fs.writeFileSync(file,s);
-const pf=path.join(root,'package.json'),p=JSON.parse(fs.readFileSync(pf,'utf8'));p.version='44.8.3';fs.writeFileSync(pf,JSON.stringify(p,null,2)+'\\n');
 const pf=path.join(root,'package.json'),p=JSON.parse(fs.readFileSync(pf,'utf8'));p.version='44.8.3';fs.writeFileSync(pf,JSON.stringify(p,null,2)+'\n');
 const gf=path.join(root,'android/app/build.gradle');let g=fs.readFileSync(gf,'utf8').replace(/versionCode\s+\d+/,'versionCode 53').replace(/versionName ['"]44\.8\.2['"]/, "versionName '44.8.3'");fs.writeFileSync(gf,g);
