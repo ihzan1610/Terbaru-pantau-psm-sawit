@@ -36,7 +36,8 @@ if(!s.includes('private void saveImageToGallery(')){
  s=s.replace(marker,method+marker);
 }
 s=s.replace('saveBytesToDownloads(name,mime,b);','saveImageToGallery(name,mime,b);');
-s=s.replace('saveBytesToDownloads(name,safeMime(mime),bytes);','saveImageToGallery(name,safeMime(mime),bytes);');\ns=s.replace('saveBytesToDownloads(name,safeMime(mime),b);','saveImageToGallery(name,safeMime(mime),b);');
+s=s.replace('saveBytesToDownloads(name,safeMime(mime),bytes);','saveImageToGallery(name,safeMime(mime),bytes);');
+s=s.replace('saveBytesToDownloads(name,safeMime(mime),b);','saveImageToGallery(name,safeMime(mime),b);');
 s=s.replace('saveBytesToDownloads(name,safeMime(mime),b);','saveImageToGallery(name,safeMime(mime),b);');
 if(!s.includes('private void saveImageToGallery(')||!s.includes('MediaStore.Images.Media.EXTERNAL_CONTENT_URI')||s.includes('saveBytesToDownloads(name,'))throw Error('Gallery save bridge verification failed');
 fs.writeFileSync(file,s);
