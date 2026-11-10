@@ -41,5 +41,5 @@ for(const f of fs.readdirSync(path.join(root,'tests')).filter(x=>x.endsWith('.te
 const releaseTest=path.join(root,'tests/release-build-config.test.js');
 if(fs.existsSync(releaseTest)){let t=fs.readFileSync(releaseTest,'utf8').replaceAll('44.7.0','44.8.0');fs.writeFileSync(releaseTest,t);}
 const migrationTest=path.join(root,'tests/technology-migration-v42.test.js');
-if(fs.existsSync(migrationTest)){let t=fs.readFileSync(migrationTest,'utf8').replace(/if\\\\\\(migrationAlreadyComplete&&row&&valid\\\\\\)/g,'if\\\\(migrationAlreadyComplete&&row&&valid(?:&&!writeThroughEnabled)?\\\\)');fs.writeFileSync(migrationTest,t);}
+if(fs.existsSync(migrationTest)){let t=fs.readFileSync(migrationTest,'utf8').replace('migrationAlreadyComplete&&row&&valid','migrationAlreadyComplete&&row&&valid(?:&&!writeThroughEnabled)?');fs.writeFileSync(migrationTest,t);}
 console.log('PSM Pantau cache/theme v44.8.0 applied');
