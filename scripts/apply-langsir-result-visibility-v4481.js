@@ -1,0 +1,20 @@
+const fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(process.argv[2]||'.');
+const web=path.join(root,'www/index.html'),android=path.join(root,'android/app/src/main/assets/index.html');
+let h=fs.readFileSync(web,'utf8');
+if(!h.includes('id="pantau-langsir-modal"')||!h.includes('window.buildPantauOngkos=')||!h.includes('window.buildPantauGaji='))throw Error('Pantau Langsir markup/functions not found');
+if(!h.includes('PSM_LANGSIR_RESULT_SCROLL_V4481')){
+ h=h.replace('.langsir-panel{width:min(760px,100%);margin:auto;background:var(--surface,#fff);color:var(--text,#0f172a);border-radius:16px;padding:16px;box-shadow:0 18px 55px rgba(0,0,0,.25);}',
+ '.langsir-panel{width:min(760px,100%);max-height:calc(100vh - 28px);max-height:calc(100dvh - 28px);overflow-y:auto;overscroll-behavior:contain;margin:auto;background:var(--surface,#fff);color:var(--text,#0f172a);border-radius:16px;padding:16px;box-shadow:0 18px 55px rgba(0,0,0,.25);}\n#pl-ongkos-result,#pl-gaji-result{scroll-margin-top:18px}\n#pl-ongkos-result:empty,#pl-gaji-result:empty{display:none}\n/* PSM_LANGSIR_RESULT_SCROLL_V4481 */');
+}
+const oldO="}).join('');};\n window.addPantauLangsirCut",newO="}).join('');scrollPantauLangsirResult('pl-ongkos-result');};\n window.addPantauLangsirCut";
+if(!h.includes(oldO))throw Error('Ongkos result render ending not found');h=h.replace(oldO,newO);
+const oldG="}).join('');};\n window.savePantauLangsirPayment",newG="}).join('');scrollPantauLangsirResult('pl-gaji-result');};\n window.savePantauLangsirPayment";
+if(!h.includes(oldG))throw Error('Gaji result render ending not found');h=h.replace(oldG,newG);
+const anchor=" window.buildPantauOngkos=";if(!h.includes(anchor))throw Error('Build ongkos anchor missing');
+h=h.replace(anchor," function scrollPantauLangsirResult(id){const target=$(id),panel=document.querySelector('#pantau-langsir-modal .langsir-panel');if(!target||!panel)return;target.setAttribute('tabindex','-1');requestAnimationFrame(()=>{const top=target.getBoundingClientRect().top-panel.getBoundingClientRect().top+panel.scrollTop-12;panel.scrollTo({top:Math.max(0,top),behavior:'smooth'});});}\n"+anchor);
+fs.writeFileSync(web,h);fs.writeFileSync(android,h);
+const pp=path.join(root,'package.json'),pkg=JSON.parse(fs.readFileSync(pp,'utf8'));pkg.version='44.8.1';fs.writeFileSync(pp,JSON.stringify(pkg,null,2)+'\n');
+const gp=path.join(root,'android/app/build.gradle');let g=fs.readFileSync(gp,'utf8').replace(/versionCode\\s+\\d+/,'versionCode 51').replace(/versionName ['"]44\\.8\\.0['"]/, "versionName '44.8.1'");fs.writeFileSync(gp,g);
+for(const n of fs.readdirSync(path.join(root,'tests')).filter(x=>x.endsWith('.test.js'))){const p=path.join(root,'tests',n);let t=fs.readFileSync(p,'utf8').split('44.8.0').join('44.8.1').split('44\\.8\\.0').join('44\\.8\\.1').split('versionCode 50').join('versionCode 51');fs.writeFileSync(p,t);}
+fs.writeFileSync(path.join(root,'tests/langsir-result-visibility-v4481.test.js'),`const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');const root=path.resolve(__dirname,'..'),h=fs.readFileSync(path.join(root,'www/index.html'),'utf8'),a=fs.readFileSync(path.join(root,'android/app/src/main/assets/index.html'),'utf8');test('Langsir panel is viewport bounded and scrollable',()=>{assert.match(h,/max-height:calc\\(100dvh - 28px\\)/);assert.match(h,/overflow-y:auto/);});test('Ongkos result scrolls into view after render',()=>assert.match(h,/pl-ongkos-result'\\);scrollPantauLangsirResult\\('pl-ongkos-result'\\)/));test('Gaji result scrolls into view after render',()=>assert.match(h,/pl-gaji-result'\\);scrollPantauLangsirResult\\('pl-gaji-result'\\)/));test('Both panes retain result targets',()=>{assert.match(h,/id="pl-ongkos-result"/);assert.match(h,/id="pl-gaji-result"/);});test('Android and web assets match',()=>assert.equal(h,a));`);
