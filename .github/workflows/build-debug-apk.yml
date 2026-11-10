@@ -167,6 +167,7 @@ jobs:
           cp "$GITHUB_WORKSPACE/scripts/apply-recap-ongkos-fix.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
           cp "$GITHUB_WORKSPACE/scripts/apply-ui-refinement.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
           cp "$GITHUB_WORKSPACE/scripts/apply-organized-storage-v447.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
+          cp "$GITHUB_WORKSPACE/scripts/apply-cache-theme-v448.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
           cp "$GITHUB_WORKSPACE/.github/workflows/build-debug-apk.yml" "$GITHUB_WORKSPACE/release/build-debug-apk.yml"
           cp "$GITHUB_WORKSPACE/README.md" "$GITHUB_WORKSPACE/release/README.md" 2>/dev/null || true
           cd "$GITHUB_WORKSPACE"
@@ -176,7 +177,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PSM-PANTAU-v44.8.0-PAKET-LENGKAP
-          path: PSM-PANTAU-v44.7.0-PAKET-LENGKAP.zip
+          path: PSM-PANTAU-v44.8.0-PAKET-LENGKAP.zip
           if-no-files-found: error
           retention-days: 14
 
