@@ -41,5 +41,6 @@ s=s.replace('saveBytesToDownloads(name,safeMime(mime),b);','saveImageToGallery(n
 s=s.replace('saveBytesToDownloads(name,safeMime(mime),b);','saveImageToGallery(name,safeMime(mime),b);');
 if(!s.includes('private void saveImageToGallery(')||!s.includes('MediaStore.Images.Media.EXTERNAL_CONTENT_URI')||s.includes('saveBytesToDownloads(name,'))throw Error('Gallery save bridge verification failed');
 fs.writeFileSync(file,s);
+const testDir=path.join(root,'tests');if(fs.existsSync(testDir)){for(const name of fs.readdirSync(testDir).filter(x=>x.endsWith('.test.js'))){const testPath=path.join(testDir,name);let t=fs.readFileSync(testPath,'utf8').split('44.8.0').join('44.8.3').split('44\\\\.8\\\\.0').join('44\\\\.8\\\\.3').split('versionCode 50').join('versionCode 53').split('versionCode 52').join('versionCode 53');fs.writeFileSync(testPath,t);}}
 const pf=path.join(root,'package.json'),p=JSON.parse(fs.readFileSync(pf,'utf8'));p.version='44.8.3';fs.writeFileSync(pf,JSON.stringify(p,null,2)+'\n');
 const gf=path.join(root,'android/app/build.gradle');let g=fs.readFileSync(gf,'utf8').replace(/versionCode\s+\d+/,'versionCode 53').replace(/versionName ['"]44\.8\.2['"]/, "versionName '44.8.3'");fs.writeFileSync(gf,g);
