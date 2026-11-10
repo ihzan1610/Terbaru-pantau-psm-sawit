@@ -7,10 +7,8 @@ if(!h.includes('PSM_LANGSIR_RESULT_SCROLL_V4481')){
  h=h.replace('.langsir-panel{width:min(760px,100%);margin:auto;background:var(--surface,#fff);color:var(--text,#0f172a);border-radius:16px;padding:16px;box-shadow:0 18px 55px rgba(0,0,0,.25);}',
  '.langsir-panel{width:min(760px,100%);max-height:calc(100vh - 28px);max-height:calc(100dvh - 28px);overflow-y:auto;overscroll-behavior:contain;margin:auto;background:var(--surface,#fff);color:var(--text,#0f172a);border-radius:16px;padding:16px;box-shadow:0 18px 55px rgba(0,0,0,.25);}\n#pl-ongkos-result,#pl-gaji-result{scroll-margin-top:18px}\n#pl-ongkos-result:empty,#pl-gaji-result:empty{display:none}\n/* PSM_LANGSIR_RESULT_SCROLL_V4481 */');
 }
-const oldO="}).join('');};\n window.addPantauLangsirCut",newO="}).join('');scrollPantauLangsirResult('pl-ongkos-result');};\n window.addPantauLangsirCut";
-if(!h.includes(oldO))throw Error('Ongkos result render ending not found');h=h.replace(oldO,newO);
-const oldG="}).join('');};\n window.savePantauLangsirPayment",newG="}).join('');scrollPantauLangsirResult('pl-gaji-result');};\n window.savePantauLangsirPayment";
-if(!h.includes(oldG))throw Error('Gaji result render ending not found');h=h.replace(oldG,newG);
+const markerO="\n window.addPantauLangsirCut",idxO=h.indexOf(markerO);if(idxO<0)throw Error('Ongkos result function boundary missing');const endO=h.lastIndexOf('};',idxO);if(endO<0)throw Error('Ongkos result function close missing');h=h.slice(0,endO)+";scrollPantauLangsirResult('pl-ongkos-result');"+h.slice(endO);
+const markerG="\n window.savePantauLangsirPayment",idxG=h.indexOf(markerG);if(idxG<0)throw Error('Gaji result function boundary missing');const endG=h.lastIndexOf('};',idxG);if(endG<0)throw Error('Gaji result function close missing');h=h.slice(0,endG)+";scrollPantauLangsirResult('pl-gaji-result');"+h.slice(endG);
 const anchor=" window.buildPantauOngkos=";if(!h.includes(anchor))throw Error('Build ongkos anchor missing');
 h=h.replace(anchor," function scrollPantauLangsirResult(id){const target=$(id),panel=document.querySelector('#pantau-langsir-modal .langsir-panel');if(!target||!panel)return;target.setAttribute('tabindex','-1');requestAnimationFrame(()=>{const top=target.getBoundingClientRect().top-panel.getBoundingClientRect().top+panel.scrollTop-12;panel.scrollTo({top:Math.max(0,top),behavior:'smooth'});});}\n"+anchor);
 fs.writeFileSync(web,h);fs.writeFileSync(android,h);
