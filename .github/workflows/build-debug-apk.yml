@@ -217,3 +217,5 @@ jobs:
           retention-days: 14
 
 # v44.8.5: rebuild after correcting native saveTextFile bridge patch.
+
+# Rebuild after syncing the patched WebView asset.
