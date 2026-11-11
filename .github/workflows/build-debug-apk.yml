@@ -225,3 +225,5 @@ jobs:
 # Rebuild after correcting the v44.8.5 metadata regression assertion.
 
 # Rebuild after fixing inherited test version pattern.
+
+# Final v44.8.5 workflow trigger after correcting the artifact upload path.
