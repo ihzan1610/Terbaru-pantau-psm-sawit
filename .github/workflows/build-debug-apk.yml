@@ -204,7 +204,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PSM-PANTAU-v44.8.5-PAKET-LENGKAP
-          path: PSM-PANTAU-v44.8.4-PAKET-LENGKAP.zip
+          path: PSM-PANTAU-v44.8.5-PAKET-LENGKAP.zip
           if-no-files-found: error
           retention-days: 14
 
