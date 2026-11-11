@@ -1,9 +1,9 @@
-name: Build PSM Pantau v44.8.4 Targeted Fixes
+name: Build PSM Pantau v44.8.5 Cloud and Backup Fixes
 
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, 'fix/live-search-filters-v44-4-1', 'fix/v44-8-4-targeted-storage-koperasi']
+    branches: [main, master, 'fix/live-search-filters-v44-4-1', 'fix/v44-8-4-targeted-storage-koperasi', 'fix/v44-8-5-cloud-backup']
 
 permissions:
   contents: read
@@ -87,6 +87,9 @@ jobs:
       - name: Apply v44.8.4 targeted bug fixes
         run: node scripts/apply-targeted-fixes-v4484.js "$PROJECT_ROOT"
 
+      - name: Apply v44.8.5 Cloud fingerprint and verified backup fixes
+        run: node scripts/apply-v4485-cloud-backup-fix.js "$PROJECT_ROOT"
+
       - name: Copy workflow and regression tests into project
         run: |
           mkdir -p "$PROJECT_ROOT/.github/workflows"
@@ -95,6 +98,14 @@ jobs:
           cp "$GITHUB_WORKSPACE/tests/v448-offline-theme-regression.test.js" "$PROJECT_ROOT/tests/"
           cp "$GITHUB_WORKSPACE/tests/langsir-result-visibility-v4481.test.js" "$PROJECT_ROOT/tests/"
           cp "$GITHUB_WORKSPACE/tests/v4484-targeted-fixes.test.js" "$PROJECT_ROOT/tests/"
+          cp "$GITHUB_WORKSPACE/tests/v4485-cloud-backup.test.js" "$PROJECT_ROOT/tests/"
+
+      - name: Verify v44.8.5 Cloud and backup fixes
+        run: |
+          set -euo pipefail
+          grep -q "fingerprintKebunRows(incoming)" "$PROJECT_ROOT/www/index.html"
+          grep -q "public boolean saveTextFile" "$PROJECT_ROOT/android/app/src/main/java/com/psmsawit/pantau/MainActivity.java"
+          grep -q "versionName .44.8.5." "$PROJECT_ROOT/android/app/build.gradle"
 
       - name: Verify organized storage patch
         run: |
@@ -173,7 +184,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$GITHUB_WORKSPACE/release/Source-Patch"
-          cp "$PROJECT_ROOT/android/app/build/outputs/apk/debug/app-debug.apk" "$GITHUB_WORKSPACE/release/PSM-PANTAU-v44.8.4.apk"
+          cp "$PROJECT_ROOT/android/app/build/outputs/apk/debug/app-debug.apk" "$GITHUB_WORKSPACE/release/PSM-PANTAU-v44.8.5.apk"
           cp "$GITHUB_WORKSPACE/PSM-PANTAU-v44.4.0-FIX-ANDROID-IME-WORKFLOW2.zip" "$GITHUB_WORKSPACE/release/Source-Asli-v44.4.0.zip"
           cp "$GITHUB_WORKSPACE/scripts/apply-live-search-filter-fix.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
           cp "$GITHUB_WORKSPACE/scripts/apply-recap-ongkos-fix.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
@@ -183,15 +194,16 @@ jobs:
           cp "$GITHUB_WORKSPACE/scripts/apply-langsir-result-visibility-v4481.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
           cp "$GITHUB_WORKSPACE/scripts/apply-native-gallery-save-v4483.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
           cp "$GITHUB_WORKSPACE/scripts/apply-targeted-fixes-v4484.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
+          cp "$GITHUB_WORKSPACE/scripts/apply-v4485-cloud-backup-fix.js" "$GITHUB_WORKSPACE/release/Source-Patch/"
           cp "$GITHUB_WORKSPACE/.github/workflows/build-debug-apk.yml" "$GITHUB_WORKSPACE/release/build-debug-apk.yml"
           cp "$GITHUB_WORKSPACE/README.md" "$GITHUB_WORKSPACE/release/README.md" 2>/dev/null || true
           cd "$GITHUB_WORKSPACE"
-          zip -qr PSM-PANTAU-v44.8.4-PAKET-LENGKAP.zip release
+          zip -qr PSM-PANTAU-v44.8.5-PAKET-LENGKAP.zip release
 
       - name: Upload Complete Release Package
         uses: actions/upload-artifact@v4
         with:
-          name: PSM-PANTAU-v44.8.4-PAKET-LENGKAP
+          name: PSM-PANTAU-v44.8.5-PAKET-LENGKAP
           path: PSM-PANTAU-v44.8.4-PAKET-LENGKAP.zip
           if-no-files-found: error
           retention-days: 14
@@ -199,7 +211,7 @@ jobs:
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: PSM-PANTAU-v44.8.4-DEBUG-APK
+          name: PSM-PANTAU-v44.8.5-DEBUG-APK
           path: ${{ env.PROJECT_ROOT }}/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
