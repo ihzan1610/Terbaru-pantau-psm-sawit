@@ -219,3 +219,5 @@ jobs:
 # v44.8.5: rebuild after correcting native saveTextFile bridge patch.
 
 # Rebuild after syncing the patched WebView asset.
+
+# Rebuild after aligning inherited version assertions.
