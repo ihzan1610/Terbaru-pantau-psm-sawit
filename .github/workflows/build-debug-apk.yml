@@ -221,3 +221,5 @@ jobs:
 # Rebuild after syncing the patched WebView asset.
 
 # Rebuild after aligning inherited version assertions.
+
+# Rebuild after correcting the v44.8.5 metadata regression assertion.
