@@ -215,3 +215,5 @@ jobs:
           path: ${{ env.PROJECT_ROOT }}/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+# v44.8.5: rebuild after correcting native saveTextFile bridge patch.
